@@ -14,7 +14,7 @@ interface SquadDashboardProps {
     squad: Squad;
     members: SquadMember[];
     currentUserId: string;
-    onLeaveSquad: () => Promise<void>;
+    onLeaveSquad: (squadId?: string) => Promise<void>;
     onRefreshMembers: () => Promise<void>;
     loading: boolean;
 }
