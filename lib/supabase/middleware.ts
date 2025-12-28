@@ -38,7 +38,13 @@ export async function updateSession(request: NextRequest) {
     } = await supabase.auth.getUser()
 
     // Protected routes - redirect to login if not authenticated
-    if (!user && !request.nextUrl.pathname.startsWith('/login') && request.nextUrl.pathname !== '/') {
+    // Allow webhooks to bypass authentication
+    if (
+        !user &&
+        !request.nextUrl.pathname.startsWith('/login') &&
+        request.nextUrl.pathname !== '/' &&
+        !request.nextUrl.pathname.startsWith('/api/webhooks')
+    ) {
         const url = request.nextUrl.clone()
         url.pathname = '/login'
         return NextResponse.redirect(url)
