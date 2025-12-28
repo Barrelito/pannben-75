@@ -52,6 +52,31 @@ export default async function WorkoutSelectionPage() {
 
                 {/* Workout Cards */}
                 <div className="space-y-4">
+                    {/* Running Coach - Hardcoded */}
+                    <Link
+                        href="/run"
+                        className="block bg-surface border-2 border-accent p-6 hover:border-accent/80 transition-colors"
+                    >
+                        <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                                <div className="flex items-center gap-3 mb-2">
+                                    <span className="text-3xl">🏃</span>
+                                    <h2 className="font-teko text-2xl uppercase tracking-wider text-accent">
+                                        LÖPCOACH
+                                    </h2>
+                                </div>
+                                <p className="font-inter text-sm text-primary/80">
+                                    9 veckors progressivt löpprogram med röstinstruktioner
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="mt-4 px-6 py-3 bg-accent text-background font-inter font-semibold text-sm uppercase tracking-wider text-center border-2 border-accent hover:bg-transparent hover:text-accent transition-all">
+                            STARTA
+                        </div>
+                    </Link>
+
+                    {/* Database Workout Tracks */}
                     {workoutTracks.map((track) => {
                         const structure = track.structure as any;
                         const icon = getTrackIcon(structure?.type);
