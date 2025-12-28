@@ -389,6 +389,14 @@ export default function DashboardClient({ user, profile }: DashboardClientProps)
                         </button>
                     )}
 
+                    {/* Running Coach Link */}
+                    <Link
+                        href="/run"
+                        className="block w-full px-8 py-6 bg-surface text-primary font-inter font-bold text-lg uppercase tracking-wider border-2 border-primary/20 hover:border-accent hover:text-accent transition-all text-center"
+                    >
+                        🏃 LÖPCOACH
+                    </Link>
+
                     {/* Squad Link - Redesigned */}
                     {isPremium ? (
                         <Link
