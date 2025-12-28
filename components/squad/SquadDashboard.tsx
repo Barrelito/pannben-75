@@ -14,7 +14,7 @@ interface SquadDashboardProps {
     squad: Squad;
     members: SquadMember[];
     currentUserId: string;
-    onLeaveSquad: (squadId?: string) => Promise<void>;
+    onLeaveSquad: (squadId: string) => Promise<void>;
     onRefreshMembers: () => Promise<void>;
     loading: boolean;
 }
@@ -43,7 +43,7 @@ export default function SquadDashboard({
     };
 
     const handleLeave = async () => {
-        await onLeaveSquad();
+        await onLeaveSquad(squad.id);
         setShowLeaveConfirm(false);
     };
 
