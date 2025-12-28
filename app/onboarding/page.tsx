@@ -273,8 +273,9 @@ export default function OnboardingPage() {
             <div className="min-h-screen bg-background flex flex-col p-6">
                 {/* Header */}
                 <div className="text-center mb-8">
-                    <h1 className="font-teko text-5xl uppercase tracking-wider text-accent">
-                        #PANNBEN75
+                    <h1 className="font-teko font-bold uppercase tracking-wider leading-none">
+                        <span className="block text-5xl text-primary">#PANNBEN</span>
+                        <span className="block text-6xl text-accent -mt-2">75</span>
                     </h1>
                 </div>
 
