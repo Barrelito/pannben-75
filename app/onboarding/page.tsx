@@ -12,7 +12,7 @@ import MobileContainer from '@/components/layout/MobileContainer';
 import OnboardingSlide from '@/components/onboarding/OnboardingSlide';
 import ProgressDots from '@/components/onboarding/ProgressDots';
 
-const TOTAL_STEPS = 5;
+const TOTAL_STEPS = 6;
 
 export default function OnboardingPage() {
     const router = useRouter();
@@ -169,6 +169,37 @@ export default function OnboardingPage() {
                 );
 
             case 4:
+                return (
+                    <OnboardingSlide icon="📲" title="SPARA APPEN">
+                        <p className="mb-4">
+                            Lägg till appen på din hemskärm för snabb åtkomst.
+                        </p>
+
+                        {/* iOS Instructions */}
+                        <div className="bg-surface border-2 border-primary/20 p-4 mb-3 text-left">
+                            <div className="flex items-center gap-2 mb-2">
+                                <span className="text-xl">📱</span>
+                                <span className="font-semibold text-accent">iPhone / iPad</span>
+                            </div>
+                            <p className="text-sm text-primary/80">
+                                Safari → Dela-knapp → "Lägg till på hemskärmen"
+                            </p>
+                        </div>
+
+                        {/* Android Instructions */}
+                        <div className="bg-surface border-2 border-primary/20 p-4 text-left">
+                            <div className="flex items-center gap-2 mb-2">
+                                <span className="text-xl">🤖</span>
+                                <span className="font-semibold text-accent">Android</span>
+                            </div>
+                            <p className="text-sm text-primary/80">
+                                Chrome → ⋮ meny → "Lägg till på startskärmen"
+                            </p>
+                        </div>
+                    </OnboardingSlide>
+                );
+
+            case 5:
                 return (
                     <div className="space-y-6">
                         <div className="text-center">
