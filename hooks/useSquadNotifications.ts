@@ -29,7 +29,7 @@ export function useSquadNotifications(userId: string) {
                     .from('squad_members')
                     .select('squad_id')
                     .eq('user_id', userId)
-                    .single();
+                    .maybeSingle();
 
                 if (!membership) {
                     setLoading(false);

@@ -30,6 +30,7 @@ interface UseDailyLogResult {
     toggleRule: (rule: RuleName, value: boolean) => Promise<void>;
     updateWaterIntake: (liters: number) => Promise<void>;
     updatePlanning: (planning: PlanningData) => Promise<void>;
+    completeDay: () => Promise<void>;
     refreshLog: () => Promise<void>;
 }
 
@@ -315,6 +316,38 @@ export function useDailyLog(userId: string): UseDailyLogResult {
     }, [userId, supabase, fetchLog]);
 
     /**
+     * Mark day as completed
+     */
+    const completeDay = useCallback(async () => {
+        setLoading(true);
+        setError(null);
+
+        try {
+            const today = getToday();
+
+            const { error: upsertError } = await supabase
+                .from('daily_logs')
+                .upsert({
+                    user_id: userId,
+                    log_date: today,
+                    is_completed: true,
+                } as any, {
+                    onConflict: 'user_id,log_date',
+                });
+
+            if (upsertError) throw upsertError;
+
+            await fetchLog(today);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to complete day');
+            console.error('Error completing day:', err);
+            throw err;
+        } finally {
+            setLoading(false);
+        }
+    }, [userId, supabase, fetchLog]);
+
+    /**
      * Refresh current log
      */
     const refreshLog = useCallback(async () => {
@@ -340,7 +373,9 @@ export function useDailyLog(userId: string): UseDailyLogResult {
         submitMorningCheckin,
         toggleRule,
         updateWaterIntake,
+        updateWaterIntake,
         updatePlanning,
+        completeDay,
         refreshLog,
     };
 }

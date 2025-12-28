@@ -181,6 +181,12 @@ export interface DailyLog {
     plan_workout_2_time: string | null; // HH:MM format
     plan_diet: string | null;
 
+    // Status
+    is_completed: boolean;
+
+    // Status
+    is_completed: boolean;
+
     created_at: string; // ISO timestamp
     updated_at: string; // ISO timestamp
 }
@@ -211,6 +217,9 @@ export interface DailyLogInsert {
     plan_workout_2?: string | null;
     plan_workout_2_time?: string | null;
     plan_diet?: string | null;
+
+    // Status
+    is_completed?: boolean;
 }
 
 export interface DailyLogUpdate {
@@ -237,6 +246,9 @@ export interface DailyLogUpdate {
     plan_workout_2?: string | null;
     plan_workout_2_time?: string | null;
     plan_diet?: string | null;
+
+    // Status
+    is_completed?: boolean;
 
     updated_at?: string;
 }

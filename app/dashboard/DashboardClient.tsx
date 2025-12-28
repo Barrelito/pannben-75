@@ -15,6 +15,7 @@ import MorningCheckin from '@/components/dashboard/MorningCheckin';
 import RulesChecklist from '@/components/dashboard/RulesChecklist';
 import BMRCalculator from '@/components/dashboard/BMRCalculator';
 import NightWatch from '@/components/dashboard/NightWatch';
+import DayCompleteOverlay from '@/components/dashboard/DayCompleteOverlay';
 import SettingsModal from '@/components/dashboard/SettingsModal';
 import DietModal from '@/components/dashboard/DietModal';
 import ToolsSection from '@/components/dashboard/ToolsSection';
@@ -25,6 +26,7 @@ import { useDailyLog } from '@/hooks/useDailyLog';
 import { usePremium } from '@/hooks/usePremium';
 import { useDiet } from '@/hooks/useDiet';
 import { useSquadNotifications } from '@/hooks/useSquadNotifications';
+import { getRandomQuote } from '@/lib/data/quotes';
 import { calculateRecoveryStatus } from '@/lib/logic/recovery';
 import { dbToUi } from '@/lib/utils/scales';
 import { getDayNumber } from '@/lib/utils/dates';
@@ -48,6 +50,7 @@ export default function DashboardClient({ user, profile }: DashboardClientProps)
         toggleRule,
         updateWaterIntake,
         updatePlanning,
+        completeDay,
     } = useDailyLog(user.id);
 
     const { isPremium, redeemVipCode, refreshStatus } = usePremium(user.id);
@@ -62,6 +65,8 @@ export default function DashboardClient({ user, profile }: DashboardClientProps)
     const [showPhotoUpload, setShowPhotoUpload] = useState(false);
     const [showGallery, setShowGallery] = useState(false);
     const [showPremiumPaywall, setShowPremiumPaywall] = useState(false);
+    const [showDayComplete, setShowDayComplete] = useState(false);
+    const [dailyQuote, setDailyQuote] = useState(getRandomQuote());
 
     // Check for premium success redirect
     useEffect(() => {
@@ -86,6 +91,13 @@ export default function DashboardClient({ user, profile }: DashboardClientProps)
             setShowMorningCheckin(needsCheckin);
         }
     }, [log, loading, gracePeriod]);
+
+    // Check if day is completed on load
+    useEffect(() => {
+        if (log?.is_completed) {
+            setShowDayComplete(true);
+        }
+    }, [log?.is_completed]);
 
     // Calculate current day
     // @ts-ignore - profile type from server
@@ -112,7 +124,6 @@ export default function DashboardClient({ user, profile }: DashboardClientProps)
         log?.reading_completed &&
         log?.photo_uploaded;
 
-    // Handle morning checkin submit
     const handleMorningCheckin = async (scores: MorningScoresUI) => {
         await submitMorningCheckin(scores);
         router.refresh();
@@ -141,6 +152,15 @@ export default function DashboardClient({ user, profile }: DashboardClientProps)
                         plan_diet: log?.plan_diet,
                     }}
                 />
+
+                {showDayComplete && (
+                    <DayCompleteOverlay
+                        quote={dailyQuote}
+                        isPremium={isPremium}
+                        onClose={() => setShowDayComplete(false)}
+                        onShowPremiumPaywall={() => setShowPremiumPaywall(true)}
+                    />
+                )}
 
                 <SettingsModal
                     isOpen={showSettings}
@@ -396,16 +416,48 @@ export default function DashboardClient({ user, profile }: DashboardClientProps)
                     )}
 
                     {/* Night Watch Button */}
+                    {/* Night Watch Button (Planning Status) */}
                     {allRulesComplete && (
                         <button
                             onClick={() => setShowNightWatch(true)}
                             className={`w-full px-8 py-4 font-inter font-semibold text-sm uppercase tracking-wider border-2 transition-all duration-300 ${(log?.plan_workout_1 || log?.plan_diet)
-                                    ? 'bg-status-green border-status-green text-black hover:bg-status-green/90'
-                                    : 'bg-accent text-background border-accent hover:bg-transparent hover:text-accent'
+                                ? 'bg-status-green border-status-green text-black hover:bg-status-green/90'
+                                : 'bg-accent text-background border-accent hover:bg-transparent hover:text-accent'
                                 }`}
                         >
-                            {(log?.plan_workout_1 || log?.plan_diet) ? '✅ PLANERAT FÖR IMORGON' : '🌙 PLANERA IMORGON'}
+                            {(log?.plan_workout_1 || log?.plan_diet) ? '✅ PLANERING KLAR' : '🌙 PLANERA IMORGON'}
                         </button>
+                    )}
+
+                    {/* Finish Day Button (Lock Day) */}
+                    {allRulesComplete && (log?.plan_workout_1 || log?.plan_diet) && (log.water_intake >= 3.5) && !log.is_completed && (
+                        <button
+                            onClick={() => {
+                                if (confirm('Bra jobbat! En dag till handlingarna. Vill du låsa dagen?')) {
+                                    completeDay();
+                                    setDailyQuote(getRandomQuote());
+                                    setShowDayComplete(true);
+                                }
+                            }}
+                            className="w-full px-8 py-6 bg-gradient-to-r from-accent to-accent/80 text-background font-teko font-bold text-2xl uppercase tracking-widest border-2 border-accent hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 shadow-xl shadow-accent/20 animate-pulse"
+                        >
+                            🔐 LÅS DAGEN & AVSLUTA
+                        </button>
+                    )}
+
+                    {/* Day Locked State Indicator */}
+                    {log?.is_completed && (
+                        <div className="w-full px-8 py-6 bg-surface/30 border border-primary/10 rounded-lg text-center animate-in fade-in duration-500">
+                            <h3 className="font-teko text-2xl uppercase tracking-widest text-primary/40 mb-2">
+                                🔐 DAGEN ÄR LÅST
+                            </h3>
+                            <button
+                                onClick={() => setShowDayComplete(true)}
+                                className="text-xs font-inter text-accent uppercase tracking-wider hover:text-accent/80 transition-colors"
+                            >
+                                VISA VISDOMSORD IGEN
+                            </button>
+                        </div>
                     )}
 
                     {/* Tools Section */}
