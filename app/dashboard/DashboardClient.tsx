@@ -51,6 +51,7 @@ export default function DashboardClient({ user, profile }: DashboardClientProps)
         updateWaterIntake,
         updatePlanning,
         completeDay,
+        resetProgress,
     } = useDailyLog(user.id);
 
     const { isPremium, redeemVipCode, refreshStatus } = usePremium(user.id);
@@ -168,6 +169,7 @@ export default function DashboardClient({ user, profile }: DashboardClientProps)
                     userId={user.id}
                     currentDay={currentDay}
                     isPremium={isPremium}
+                    onReset={resetProgress}
                     onRedeemVip={async (code) => {
                         const result = await redeemVipCode(code);
                         if (result.success) {

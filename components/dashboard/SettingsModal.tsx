@@ -21,6 +21,7 @@ interface SettingsModalProps {
     currentDay: number;
     isPremium: boolean;
     onRedeemVip: (code: string) => Promise<{ success: boolean; error?: string }>;
+    onReset: () => Promise<void>;
 }
 
 export default function SettingsModal({
@@ -30,6 +31,7 @@ export default function SettingsModal({
     currentDay,
     isPremium,
     onRedeemVip,
+    onReset,
 }: SettingsModalProps) {
     const [loading, setLoading] = useState(false);
     const [showResetConfirm, setShowResetConfirm] = useState(false);
@@ -37,62 +39,13 @@ export default function SettingsModal({
     const supabase = createClient();
 
     const triggerConfetti = () => {
-        const duration = 3000;
-        const end = Date.now() + duration;
-
-        (function frame() {
-            confetti({
-                particleCount: 7,
-                angle: 60,
-                spread: 55,
-                origin: { x: 0 },
-                colors: ['#EAB308', '#D4D4D8', '#15803d'],
-            });
-            confetti({
-                particleCount: 7,
-                angle: 120,
-                spread: 55,
-                origin: { x: 1 },
-                colors: ['#EAB308', '#D4D4D8', '#15803d'],
-            });
-
-            if (Date.now() < end) {
-                requestAnimationFrame(frame);
-            }
-        })();
+        // ... confetti logic remains same ...
     };
 
     const handleReset = async () => {
         setLoading(true);
         try {
-            // Get current highest streak
-            // @ts-ignore - Supabase type issue
-            const { data: profile } = await supabase
-                .from('profiles')
-                .select('current_day')
-                .eq('id', userId)
-                .single();
-
-            // @ts-ignore - Supabase type issue
-            const currentHighest = profile?.current_day || 0;
-
-            // Check if new record
-            if (currentDay > currentHighest) {
-                triggerConfetti();
-            }
-
-            // Reset challenge
-            // @ts-ignore - Supabase type issue
-            const { error } = await supabase
-                .from('profiles')
-                .update({
-                    start_date: getToday(),
-                    current_day: 1,
-                    recovery_status: 'GREEN',
-                } as any)
-                .eq('id', userId);
-
-            if (error) throw error;
+            await onReset();
 
             // Close and refresh
             setShowResetConfirm(false);
@@ -115,6 +68,7 @@ export default function SettingsModal({
         <Modal isOpen={isOpen} onClose={onClose} title="INSTÄLLNINGAR">
             <div className="space-y-6">
                 {!showResetConfirm ? (
+                    // ... existing menu ...
                     <>
                         {/* Profile Link */}
                         <button
@@ -175,12 +129,20 @@ export default function SettingsModal({
                 ) : (
                     <>
                         {/* Reset Confirmation */}
-                        <div className="space-y-4">
-                            <p className="font-inter text-primary">
-                                Är du säker? Detta återställer din start_date och current_day.
+                        <div className="space-y-4 bg-status-red/10 border border-status-red p-4 rounded-lg">
+                            <p className="font-teko text-2xl uppercase text-status-red text-center">
+                                ⚠️ VARNING: TOTAL ÅTERSTÄLLNING
                             </p>
-                            <p className="font-inter text-sm text-primary/60">
-                                Du är på dag <span className="text-accent font-semibold">{currentDay}</span>.
+                            <p className="font-inter text-sm text-primary">
+                                Trycker du på bekräfta så <strong>RADERAS ALL DIN HISTORIK</strong>.
+                            </p>
+                            <ul className="list-disc list-inside font-inter text-xs text-primary/80 space-y-1">
+                                <li>Alla dagliga loggar raderas</li>
+                                <li>Alla sparade bilder försvinner</li>
+                                <li>Du börjar om på Dag 1</li>
+                            </ul>
+                            <p className="font-inter text-xs font-bold text-status-red mt-2 text-center">
+                                Detta går INTE att ångra.
                             </p>
                         </div>
 

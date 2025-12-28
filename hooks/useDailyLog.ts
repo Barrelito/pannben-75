@@ -31,6 +31,7 @@ interface UseDailyLogResult {
     updateWaterIntake: (liters: number) => Promise<void>;
     updatePlanning: (planning: PlanningData) => Promise<void>;
     completeDay: () => Promise<void>;
+    resetProgress: () => Promise<void>;
     refreshLog: () => Promise<void>;
 }
 
@@ -348,6 +349,51 @@ export function useDailyLog(userId: string): UseDailyLogResult {
     }, [userId, supabase, fetchLog]);
 
     /**
+     * Hard Reset Progress
+     * WARNING: Deletes all logs and resets profile
+     */
+    const resetProgress = useCallback(async () => {
+        setLoading(true);
+        setError(null);
+
+        try {
+            // 1. Delete all daily logs
+            const { error: deleteError } = await supabase
+                .from('daily_logs')
+                .delete()
+                .eq('user_id', userId);
+
+            if (deleteError) throw deleteError;
+
+            // 2. Reset profile stats
+            // @ts-ignore - Supabase type issue
+            const { error: profileError } = await supabase
+                .from('profiles')
+                .update({
+                    start_date: null,
+                    current_day: 0,
+                    recovery_status: null,
+                } as any)
+                .eq('id', userId);
+
+            if (profileError) throw profileError;
+
+            // 3. Clear local state
+            setLog(null);
+            setGracePeriod(null);
+
+            // 4. Force refresh
+            await fetchLog(getToday());
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to reset progress');
+            console.error('Error resetting progress:', err);
+            throw err;
+        } finally {
+            setLoading(false);
+        }
+    }, [userId, supabase, fetchLog]);
+
+    /**
      * Refresh current log
      */
     const refreshLog = useCallback(async () => {
@@ -375,6 +421,7 @@ export function useDailyLog(userId: string): UseDailyLogResult {
         updateWaterIntake,
         updatePlanning,
         completeDay,
+        resetProgress,
         refreshLog,
     };
 }
