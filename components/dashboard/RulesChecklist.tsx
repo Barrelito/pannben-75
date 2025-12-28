@@ -6,8 +6,7 @@
 'use client';
 
 import { useState } from 'react';
-import Checkbox from '@/components/ui/Checkbox';
-import WaterCounter from '@/components/dashboard/WaterCounter';
+
 import type { DailyLog } from '@/types/database.types';
 import type { RuleName } from '@/types/logic.types';
 
@@ -46,7 +45,6 @@ export default function RulesChecklist({
     };
 
     const handlePhotoToggle = () => {
-        // If photo exists, view it; otherwise open upload
         if (log?.progress_photo_url) {
             onViewPhoto?.();
         } else {
@@ -55,83 +53,117 @@ export default function RulesChecklist({
     };
 
     const rules = [
-        { key: 'diet_completed' as RuleName, label: 'DIET', hasInfo: true, isPhoto: false },
-        { key: 'workout_outdoor_completed' as RuleName, label: 'TRÄNING UTOMHUS', hasInfo: false, isPhoto: false },
-        { key: 'workout_indoor_completed' as RuleName, label: 'TRÄNING INOMHUS', hasInfo: false, isPhoto: false },
-        { key: 'reading_completed' as RuleName, label: 'LÄSNING (10 SIDOR)', hasInfo: false, isPhoto: false },
-        { key: 'photo_uploaded' as RuleName, label: 'PROGRESS FOTO 📷', hasInfo: false, isPhoto: true },
+        { key: 'diet_completed' as RuleName, icon: '🍽️', label: 'DIET', sub: 'Inga undantag', hasInfo: true, isPhoto: false },
+        { key: 'workout_outdoor_completed' as RuleName, icon: '🏃', label: 'UTOMHUS', sub: '45 min · Friska luften', hasInfo: false, isPhoto: false },
+        { key: 'workout_indoor_completed' as RuleName, icon: '🏋️', label: 'INOMHUS', sub: '45 min · Bygg pannben', hasInfo: false, isPhoto: false },
+        { key: 'reading_completed' as RuleName, icon: '📖', label: 'LÄSNING', sub: '10 sidor · Ingen fiction', hasInfo: false, isPhoto: false },
+        { key: 'photo_uploaded' as RuleName, icon: '📸', label: 'FOTO', sub: 'Dokumentera sanningen', hasInfo: false, isPhoto: true },
     ];
 
-    // Count completed rules
-    const completedCount = rules.filter((rule) => log?.[rule.key] === true).length;
-
     return (
-        <div className="bg-surface border-2 border-primary/20 p-6 space-y-6">
-            {/* Header */}
-            <h2 className="font-teko text-2xl uppercase tracking-wider text-primary border-b-2 border-primary/20 pb-2">
-                DE 5 REGLERNA
-            </h2>
+        <div className="space-y-4">
+            {/* Rules Cards */}
+            <div className="grid gap-3">
+                {rules.map((rule) => {
+                    const isCompleted = rule.isPhoto ? !!log?.progress_photo_url : log?.[rule.key] === true;
+                    const isUpdating = updatingRule === rule.key;
 
-            {/* Rules */}
-            <div className="space-y-4">
-                {rules.map((rule) => (
-                    <div key={rule.key} className="flex items-center justify-between">
-                        <Checkbox
-                            checked={rule.isPhoto ? !!log?.progress_photo_url : log?.[rule.key] === true}
-                            onChange={(value) => rule.isPhoto ? handlePhotoToggle() : handleToggle(rule.key, value)}
-                            label={rule.label}
-                            disabled={updatingRule === rule.key}
-                        />
+                    return (
+                        <div
+                            key={rule.key}
+                            onClick={() => !isUpdating && (rule.isPhoto ? handlePhotoToggle() : handleToggle(rule.key, !isCompleted))}
+                            className={`
+                                relative overflow-hidden p-4 rounded-xl border-2 transition-all duration-200 cursor-pointer group select-none
+                                ${isCompleted
+                                    ? 'bg-status-green/10 border-status-green/50'
+                                    : 'bg-surface border-white/5 hover:border-white/10'
+                                }
+                            `}
+                        >
+                            <div className="flex items-center justify-between relative z-10">
+                                <div className="flex items-center gap-4">
+                                    <span className="text-2xl filter drop-shadow-lg">{rule.icon}</span>
+                                    <div>
+                                        <h3 className={`font-teko text-xl uppercase tracking-wider leading-none ${isCompleted ? 'text-status-green' : 'text-primary'}`}>
+                                            {rule.label}
+                                        </h3>
+                                        <p className="font-inter text-xs text-primary/50 font-medium">
+                                            {rule.sub}
+                                        </p>
+                                    </div>
+                                </div>
 
-                        {/* Diet Selection/Info */}
-                        {rule.hasInfo && (
-                            <div className="flex items-center gap-2">
-                                {selectedDietName ? (
-                                    <button
-                                        onClick={isPremium ? onShowDietInfo : onShowPremiumPaywall}
-                                        className="flex items-center gap-2 px-3 py-1 bg-surface border border-primary/20 hover:border-accent transition-colors rounded-sm"
-                                    >
-                                        <span className="font-inter text-xs text-primary/80">
-                                            {selectedDietName.toUpperCase()}
-                                        </span>
-                                        <span className="text-primary/60">ℹ️</span>
-                                    </button>
-                                ) : isPremium ? (
-                                    <button
-                                        onClick={onShowDietInfo}
-                                        className="px-3 py-1 bg-accent text-background font-inter font-semibold text-xs uppercase tracking-wider hover:bg-accent/80 transition-colors rounded-sm"
-                                    >
-                                        VÄLJ DIET
-                                    </button>
-                                ) : (
-                                    <button
-                                        onClick={onShowPremiumPaywall}
-                                        className="px-3 py-1 bg-surface text-primary/60 font-inter font-semibold text-xs uppercase tracking-wider border border-primary/20 hover:border-accent hover:text-accent transition-colors rounded-sm"
-                                    >
-                                        🔒 VÄLJ DIET
-                                    </button>
-                                )}
+                                <div className={`
+                                    w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all bg-background
+                                    ${isCompleted
+                                        ? 'border-status-green bg-status-green text-black'
+                                        : 'border-primary/20 text-transparent'
+                                    }
+                                `}>
+                                    {isUpdating ? (
+                                        <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                                    ) : (
+                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                        </svg>
+                                    )}
+                                </div>
                             </div>
-                        )}
+
+                            {/* Diet Info Button (Integrated) */}
+                            {rule.hasInfo && (
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        isPremium ? onShowDietInfo?.() : onShowPremiumPaywall?.();
+                                    }}
+                                    className="absolute bottom-2 right-14 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-surface/50 text-primary/40 hover:text-accent hover:bg-surface border border-transparent hover:border-accent/20 transition-all"
+                                >
+                                    {selectedDietName || 'VÄLJ DIET'}
+                                </button>
+                            )}
+                        </div>
+                    );
+                })}
+            </div>
+
+            {/* Water Tracker (Visual) */}
+            <div className="bg-surface border-2 border-primary/20 rounded-xl p-5 relative overflow-hidden">
+                <div className="flex items-center justify-between mb-3 relative z-10">
+                    <div className="flex items-center gap-3">
+                        <span className="text-2xl">💧</span>
+                        <div>
+                            <h3 className="font-teko text-xl uppercase tracking-wider text-primary leading-none">VATTEN</h3>
+                            <p className="font-inter text-xs text-primary/50">3.5 Liter per dag</p>
+                        </div>
                     </div>
-                ))}
-            </div>
+                    <div className="font-teko text-2xl text-accent">
+                        {(log?.water_intake || 0).toFixed(1)}L
+                    </div>
+                </div>
 
-            {/* Water Intake */}
-            <div className="pt-4 border-t-2 border-primary/20">
-                <label className="block font-inter text-xs uppercase tracking-wider text-primary/60 mb-3">
-                    VATTEN
-                </label>
-                <WaterCounter
-                    liters={log?.water_intake ? Number(log.water_intake) : 0}
-                    onChange={onUpdateWater}
-                />
-            </div>
+                {/* Progress Bar */}
+                <div className="h-4 bg-background rounded-full overflow-hidden mb-4 border border-white/5 relative z-10">
+                    <div
+                        className="h-full bg-blue-500 transition-all duration-500 ease-out"
+                        style={{ width: `${Math.min(((log?.water_intake || 0) / 3.5) * 100, 100)}%` }}
+                    />
+                </div>
 
-            {/* Progress */}
-            <div className="pt-4 border-t-2 border-primary/20">
-                <div className="font-teko text-xl text-center text-accent uppercase tracking-wider">
-                    {completedCount}/5 REGLER KLARA
+                {/* Controls */}
+                <div className="flex gap-2 relative z-10">
+                    <button
+                        onClick={() => onUpdateWater(Math.max((log?.water_intake || 0) - 0.5, 0))}
+                        className="flex-1 py-3 bg-background border border-primary/10 rounded-lg text-primary/60 hover:text-primary hover:border-primary/30 transition-all font-teko text-xl"
+                    >
+                        - 0.5L
+                    </button>
+                    <button
+                        onClick={() => onUpdateWater((log?.water_intake || 0) + 0.5)}
+                        className="flex-1 py-3 bg-blue-500/10 border border-blue-500/30 rounded-lg text-blue-400 hover:bg-blue-500/20 hover:text-blue-300 transition-all font-teko text-xl"
+                    >
+                        + 0.5L
+                    </button>
                 </div>
             </div>
         </div>

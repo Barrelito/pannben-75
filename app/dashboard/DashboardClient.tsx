@@ -11,7 +11,7 @@ import Link from 'next/link';
 import MobileContainer from '@/components/layout/MobileContainer';
 import Logo from '@/components/ui/Logo';
 import MorningCheckin from '@/components/dashboard/MorningCheckin';
-import RecoveryStatus from '@/components/dashboard/RecoveryStatus';
+
 import RulesChecklist from '@/components/dashboard/RulesChecklist';
 import BMRCalculator from '@/components/dashboard/BMRCalculator';
 import NightWatch from '@/components/dashboard/NightWatch';
@@ -249,57 +249,89 @@ export default function DashboardClient({ user, profile }: DashboardClientProps)
                     }}
                 />
 
-                {/* Header */}
-                <div className="p-6 border-b-2 border-primary/20">
-                    <div className="flex items-center justify-between mb-4">
-                        <Logo />
-                        <button
-                            onClick={() => setShowSettings(true)}
-                            className="text-primary/60 hover:text-accent transition-colors"
-                            aria-label="Settings"
-                        >
-                            <svg
-                                className="w-6 h-6"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                            >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-                                />
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                                />
-                            </svg>
-                        </button>
-                    </div>
 
-                    <div className="font-teko text-4xl text-accent uppercase tracking-wider">
-                        DAG {currentDay}/75
-                    </div>
+                <div className="relative">
+                    {/* Status Background Gradient */}
+                    <div className={`absolute inset-0 opacity-20 bg-gradient-to-b from-${recoveryData?.status === 'RED' ? 'status-red' : recoveryData?.status === 'YELLOW' ? 'status-yellow' : 'status-green'} to-background pointer-events-none`} />
 
-                    {gracePeriod?.mustLogYesterday && (
-                        <div className="mt-2 p-3 bg-status-yellow/10 border-2 border-status-yellow text-primary font-inter text-sm">
-                            ⚠️ {gracePeriod.message}
+                    {/* Header Content */}
+                    <div className="relative z-10 p-6 space-y-4">
+                        <div className="flex items-center justify-between">
+                            <Logo />
+                            <div className="flex items-center gap-4">
+                                {isPremium && (
+                                    <div className="px-3 py-1 bg-accent/10 border border-accent/20 rounded-full">
+                                        <span className="text-[10px] font-bold text-accent uppercase tracking-widest">Premium</span>
+                                    </div>
+                                )}
+                                <button
+                                    onClick={() => setShowSettings(true)}
+                                    className="w-10 h-10 flex items-center justify-center rounded-full bg-surface border border-primary/10 text-primary/60 hover:text-accent hover:border-accent transition-all"
+                                >
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    </svg>
+                                </button>
+                            </div>
                         </div>
-                    )}
+
+                        <div className="flex flex-col items-center gap-6 py-6">
+                            {/* Profile & Status Hero */}
+                            <div className="flex items-center gap-4">
+                                {/* Profile Avatar */}
+                                <div className="relative w-24 h-24 rounded-full border-2 border-primary/20 overflow-hidden shadow-2xl">
+                                    {profile?.avatar_url ? (
+                                        <img src={profile.avatar_url} alt="Profile" className="w-full h-full object-cover" />
+                                    ) : (
+                                        <div className="w-full h-full bg-surface flex items-center justify-center text-4xl">
+                                            🫡
+                                        </div>
+                                    )}
+                                    {/* Premium Badge */}
+                                    {isPremium && (
+                                        <div className="absolute bottom-0 right-0 w-8 h-8 bg-accent rounded-full border-4 border-background flex items-center justify-center text-sm shadow-lg z-10">
+                                            ✨
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Recovery Status Badge */}
+                                {recoveryData && (
+                                    <div className={`flex flex-col p-4 rounded-xl border backdrop-blur-md shadow-xl transition-all ${recoveryData.status === 'RED' ? 'bg-status-red/10 border-status-red/30 text-status-red' :
+                                        recoveryData.status === 'YELLOW' ? 'bg-status-yellow/10 border-status-yellow/30 text-status-yellow' :
+                                            'bg-status-green/10 border-status-green/30 text-status-green'
+                                        }`}>
+                                        <span className="font-teko text-3xl uppercase tracking-wider leading-none mb-1 shadow-black drop-shadow-sm">
+                                            {recoveryData.status === 'GREEN' ? 'REDO FÖR STRID' :
+                                                recoveryData.status === 'YELLOW' ? 'ÅTERHÄMTNING' :
+                                                    'VILA PÅKRÄVD'}
+                                        </span>
+                                        <span className="font-inter text-[10px] font-bold opacity-90 max-w-[160px] leading-tight uppercase tracking-wide">
+                                            {recoveryData.message}
+                                        </span>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Day Counter */}
+                            <div className="text-center">
+                                <h1 className="font-teko text-8xl text-primary leading-none filter drop-shadow-2xl">
+                                    <span className="text-accent">DAG {currentDay}</span><span className="text-primary/20">/75</span>
+                                </h1>
+                            </div>
+
+                            {gracePeriod?.mustLogYesterday && (
+                                <div className="inline-block px-4 py-2 bg-status-yellow/10 border border-status-yellow/30 rounded-lg">
+                                    <span className="text-status-yellow text-xs font-bold uppercase tracking-wider">⚠️ {gracePeriod.message}</span>
+                                </div>
+                            )}
+                        </div>
+                    </div>
                 </div>
 
+                {/* Content Wrapper */}
                 <div className="p-6 space-y-6">
-                    {/* Recovery Status */}
-                    {recoveryData && (
-                        <RecoveryStatus
-                            status={recoveryData.status}
-                            message={recoveryData.message}
-                            totalScore={recoveryData.totalScore}
-                        />
-                    )}
 
                     {/* Rules Checklist */}
                     <RulesChecklist
@@ -367,9 +399,12 @@ export default function DashboardClient({ user, profile }: DashboardClientProps)
                     {allRulesComplete && (
                         <button
                             onClick={() => setShowNightWatch(true)}
-                            className="w-full px-8 py-4 bg-accent text-background font-inter font-semibold text-sm uppercase tracking-wider border-2 border-accent hover:bg-transparent hover:text-accent transition-all duration-300"
+                            className={`w-full px-8 py-4 font-inter font-semibold text-sm uppercase tracking-wider border-2 transition-all duration-300 ${(log?.plan_workout_1 || log?.plan_diet)
+                                    ? 'bg-status-green border-status-green text-black hover:bg-status-green/90'
+                                    : 'bg-accent text-background border-accent hover:bg-transparent hover:text-accent'
+                                }`}
                         >
-                            🌙 PLANERA IMORGON
+                            {(log?.plan_workout_1 || log?.plan_diet) ? '✅ PLANERAT FÖR IMORGON' : '🌙 PLANERA IMORGON'}
                         </button>
                     )}
 
@@ -377,6 +412,6 @@ export default function DashboardClient({ user, profile }: DashboardClientProps)
                     <ToolsSection onOpenGallery={() => setShowGallery(true)} />
                 </div>
             </main>
-        </MobileContainer>
+        </MobileContainer >
     );
 }
