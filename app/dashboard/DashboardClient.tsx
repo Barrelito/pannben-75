@@ -277,7 +277,7 @@ export default function DashboardClient({ user, profile }: DashboardClientProps)
                     {/* Header Content */}
                     <div className="relative z-10 p-6 space-y-4">
                         <div className="flex items-center justify-between">
-                            <Logo />
+                            <Logo size="small" />
                             <div className="flex items-center gap-4">
                                 {isPremium && (
                                     <div className="px-3 py-1 bg-accent/10 border border-accent/20 rounded-full">
