@@ -123,10 +123,11 @@ export default function SquadDetailClient({ user, squadId }: SquadDetailClientPr
                                 </div>
                                 <button
                                     onClick={async () => {
+                                        const joinLink = `${window.location.origin}/join/${squad.invite_code}`;
                                         const shareData = {
                                             title: 'Gå med i min Pluton',
-                                            text: `Häng med i min pluton "${squad.name}" på Pannben75! ⚔️\nAnvänd kod: ${squad.invite_code}`,
-                                            url: window.location.origin + '/squad'
+                                            text: `Häng med i min pluton "${squad.name}" på Pannben75! ⚔️\n\nVi kör 75 dagar utan ursäkter. Vågar du?\n\nGå med här:`,
+                                            url: joinLink
                                         };
 
                                         if (navigator.share) {
@@ -136,8 +137,8 @@ export default function SquadDetailClient({ user, squadId }: SquadDetailClientPr
                                                 console.error('Error sharing:', err);
                                             }
                                         } else {
-                                            await navigator.clipboard.writeText(`${shareData.text}\n${shareData.url}`);
-                                            alert('Inbjudan kopierad till urklipp! 📋');
+                                            await navigator.clipboard.writeText(`${shareData.text} ${shareData.url}`);
+                                            alert('Inbjudningslänk kopierad! 📋');
                                         }
                                     }}
                                     className="p-2 bg-surface text-primary border border-primary/20 hover:border-accent hover:text-accent transition-all"
