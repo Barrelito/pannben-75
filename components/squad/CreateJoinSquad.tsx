@@ -9,7 +9,7 @@ import { useState } from 'react';
 
 interface CreateJoinSquadProps {
     onCreateSquad: (name: string) => Promise<void>;
-    onJoinSquad: (code: string) => Promise<void>;
+    onJoinSquad: (code: string) => Promise<string | void>;
     loading: boolean;
     error: string | null;
 }
