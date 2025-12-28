@@ -58,9 +58,9 @@ const WEEK_1_INTERVALS: Interval[] = [
 // Week 2: Run 1.5min / Walk 2min (x10)
 const WEEK_2_INTERVALS: Interval[] = [
     WARMUP,
-    ...Array(10).fill(null).flatMap((_, i) => [
-        { type: 'RUN', durationSeconds: 90, voiceCue: i === 0 ? 'Spring nu! Nittio sekunder.' : (i === 9 ? 'Sista rundan! Spring!' : 'Spring!') },
-        { type: 'WALK', durationSeconds: 120, voiceCue: 'Gå.' },
+    ...Array(10).fill(null).flatMap((_, i): Interval[] => [
+        { type: 'RUN' as const, durationSeconds: 90, voiceCue: i === 0 ? 'Spring nu! Nittio sekunder.' : (i === 9 ? 'Sista rundan! Spring!' : 'Spring!') },
+        { type: 'WALK' as const, durationSeconds: 120, voiceCue: 'Gå.' },
     ]),
     COOLDOWN,
 ];
@@ -68,9 +68,9 @@ const WEEK_2_INTERVALS: Interval[] = [
 // Week 3: Run 2min / Walk 1.5min (x10)
 const WEEK_3_INTERVALS: Interval[] = [
     WARMUP,
-    ...Array(10).fill(null).flatMap((_, i) => [
-        { type: 'RUN', durationSeconds: 120, voiceCue: i === 0 ? 'Spring nu! Två minuter.' : (i === 9 ? 'Sista rundan! Spring!' : 'Spring!') },
-        { type: 'WALK', durationSeconds: 90, voiceCue: 'Gå.' },
+    ...Array(10).fill(null).flatMap((_, i): Interval[] => [
+        { type: 'RUN' as const, durationSeconds: 120, voiceCue: i === 0 ? 'Spring nu! Två minuter.' : (i === 9 ? 'Sista rundan! Spring!' : 'Spring!') },
+        { type: 'WALK' as const, durationSeconds: 90, voiceCue: 'Gå.' },
     ]),
     COOLDOWN,
 ];
@@ -78,9 +78,9 @@ const WEEK_3_INTERVALS: Interval[] = [
 // Week 4: Run 3min / Walk 2min (x7)
 const WEEK_4_INTERVALS: Interval[] = [
     WARMUP,
-    ...Array(7).fill(null).flatMap((_, i) => [
-        { type: 'RUN', durationSeconds: 180, voiceCue: i === 0 ? 'Spring nu! Tre minuter.' : (i === 6 ? 'Sista rundan! Spring!' : 'Spring!') },
-        { type: 'WALK', durationSeconds: 120, voiceCue: 'Gå.' },
+    ...Array(7).fill(null).flatMap((_, i): Interval[] => [
+        { type: 'RUN' as const, durationSeconds: 180, voiceCue: i === 0 ? 'Spring nu! Tre minuter.' : (i === 6 ? 'Sista rundan! Spring!' : 'Spring!') },
+        { type: 'WALK' as const, durationSeconds: 120, voiceCue: 'Gå.' },
     ]),
     COOLDOWN,
 ];
