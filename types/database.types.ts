@@ -184,9 +184,6 @@ export interface DailyLog {
     // Status
     is_completed: boolean;
 
-    // Status
-    is_completed: boolean;
-
     created_at: string; // ISO timestamp
     updated_at: string; // ISO timestamp
 }

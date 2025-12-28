@@ -373,7 +373,6 @@ export function useDailyLog(userId: string): UseDailyLogResult {
         submitMorningCheckin,
         toggleRule,
         updateWaterIntake,
-        updateWaterIntake,
         updatePlanning,
         completeDay,
         refreshLog,
