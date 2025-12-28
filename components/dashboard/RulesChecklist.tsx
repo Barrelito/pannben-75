@@ -19,6 +19,8 @@ interface RulesChecklistProps {
     selectedDietName?: string | null;
     onPhotoClick?: () => void;
     onViewPhoto?: () => void;
+    isPremium?: boolean;
+    onShowPremiumPaywall?: () => void;
 }
 
 export default function RulesChecklist({
@@ -29,6 +31,8 @@ export default function RulesChecklist({
     selectedDietName,
     onPhotoClick,
     onViewPhoto,
+    isPremium = false,
+    onShowPremiumPaywall,
 }: RulesChecklistProps) {
     const [updatingRule, setUpdatingRule] = useState<RuleName | null>(null);
 
@@ -80,11 +84,11 @@ export default function RulesChecklist({
                         />
 
                         {/* Diet Selection/Info */}
-                        {rule.hasInfo && onShowDietInfo && (
+                        {rule.hasInfo && (
                             <div className="flex items-center gap-2">
                                 {selectedDietName ? (
                                     <button
-                                        onClick={onShowDietInfo}
+                                        onClick={isPremium ? onShowDietInfo : onShowPremiumPaywall}
                                         className="flex items-center gap-2 px-3 py-1 bg-surface border border-primary/20 hover:border-accent transition-colors rounded-sm"
                                     >
                                         <span className="font-inter text-xs text-primary/80">
@@ -92,12 +96,19 @@ export default function RulesChecklist({
                                         </span>
                                         <span className="text-primary/60">ℹ️</span>
                                     </button>
-                                ) : (
+                                ) : isPremium ? (
                                     <button
                                         onClick={onShowDietInfo}
                                         className="px-3 py-1 bg-accent text-background font-inter font-semibold text-xs uppercase tracking-wider hover:bg-accent/80 transition-colors rounded-sm"
                                     >
                                         VÄLJ DIET
+                                    </button>
+                                ) : (
+                                    <button
+                                        onClick={onShowPremiumPaywall}
+                                        className="px-3 py-1 bg-surface text-primary/60 font-inter font-semibold text-xs uppercase tracking-wider border border-primary/20 hover:border-accent hover:text-accent transition-colors rounded-sm"
+                                    >
+                                        🔒 VÄLJ DIET
                                     </button>
                                 )}
                             </div>

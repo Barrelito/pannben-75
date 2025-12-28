@@ -20,6 +20,7 @@ import DietModal from '@/components/dashboard/DietModal';
 import ToolsSection from '@/components/dashboard/ToolsSection';
 import PhotoUpload from '@/components/dashboard/PhotoUpload';
 import PhotoGallery from '@/components/dashboard/PhotoGallery';
+import PremiumPaywall from '@/components/premium/PremiumPaywall';
 import { useDailyLog } from '@/hooks/useDailyLog';
 import { usePremium } from '@/hooks/usePremium';
 import { useDiet } from '@/hooks/useDiet';
@@ -58,6 +59,7 @@ export default function DashboardClient({ user, profile }: DashboardClientProps)
     const [showDietModal, setShowDietModal] = useState(false);
     const [showPhotoUpload, setShowPhotoUpload] = useState(false);
     const [showGallery, setShowGallery] = useState(false);
+    const [showPremiumPaywall, setShowPremiumPaywall] = useState(false);
 
     // Check for premium success redirect
     useEffect(() => {
@@ -230,6 +232,21 @@ export default function DashboardClient({ user, profile }: DashboardClientProps)
                 {/* Photo Gallery */}
                 {showGallery && <PhotoGallery userId={user.id} onClose={() => setShowGallery(false)} />}
 
+                {/* Premium Paywall */}
+                <PremiumPaywall
+                    isOpen={showPremiumPaywall}
+                    onClose={() => setShowPremiumPaywall(false)}
+                    userId={user.id}
+                    onRedeemVip={async (code) => {
+                        const result = await redeemVipCode(code);
+                        if (result.success) {
+                            await refreshStatus();
+                            setShowPremiumPaywall(false);
+                        }
+                        return result;
+                    }}
+                />
+
                 {/* Header */}
                 <div className="p-6 border-b-2 border-primary/20">
                     <div className="flex items-center justify-between mb-4">
@@ -295,23 +312,43 @@ export default function DashboardClient({ user, profile }: DashboardClientProps)
                                 window.open(log.progress_photo_url, '_blank');
                             }
                         }}
+                        isPremium={isPremium}
+                        onShowPremiumPaywall={() => setShowPremiumPaywall(true)}
                     />
 
                     {/* Workout Link */}
-                    <Link
-                        href="/workout"
-                        className="block w-full px-8 py-4 bg-surface text-primary font-inter font-semibold text-sm uppercase tracking-wider border-2 border-primary/20 hover:border-accent hover:text-accent transition-all text-center"
-                    >
-                        💪 STARTA TRÄNING
-                    </Link>
+                    {isPremium ? (
+                        <Link
+                            href="/workout"
+                            className="block w-full px-8 py-4 bg-surface text-primary font-inter font-semibold text-sm uppercase tracking-wider border-2 border-primary/20 hover:border-accent hover:text-accent transition-all text-center"
+                        >
+                            💪 STARTA TRÄNING
+                        </Link>
+                    ) : (
+                        <button
+                            onClick={() => setShowPremiumPaywall(true)}
+                            className="w-full px-8 py-4 bg-surface text-primary/60 font-inter font-semibold text-sm uppercase tracking-wider border-2 border-primary/20 hover:border-accent hover:text-accent transition-all text-center"
+                        >
+                            🔒 STARTA TRÄNING
+                        </button>
+                    )}
 
                     {/* Squad Link */}
-                    <Link
-                        href="/squad"
-                        className="block w-full px-8 py-4 bg-surface text-primary font-inter font-semibold text-sm uppercase tracking-wider border-2 border-primary/20 hover:border-accent hover:text-accent transition-all text-center"
-                    >
-                        ⚔️ PLUTONEN
-                    </Link>
+                    {isPremium ? (
+                        <Link
+                            href="/squad"
+                            className="block w-full px-8 py-4 bg-surface text-primary font-inter font-semibold text-sm uppercase tracking-wider border-2 border-primary/20 hover:border-accent hover:text-accent transition-all text-center"
+                        >
+                            ⚔️ PLUTONEN
+                        </Link>
+                    ) : (
+                        <button
+                            onClick={() => setShowPremiumPaywall(true)}
+                            className="w-full px-8 py-4 bg-surface text-primary/60 font-inter font-semibold text-sm uppercase tracking-wider border-2 border-primary/20 hover:border-accent hover:text-accent transition-all text-center"
+                        >
+                            🔒 PLUTONEN
+                        </button>
+                    )}
 
                     {/* Night Watch Button */}
                     {allRulesComplete && (
