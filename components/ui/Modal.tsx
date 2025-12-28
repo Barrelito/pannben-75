@@ -68,7 +68,7 @@ export default function Modal({
                 )}
 
                 {/* Content */}
-                <div>{children}</div>
+                <div className="overflow-y-auto max-h-[70vh]">{children}</div>
 
                 {/* Close Button (X) */}
                 <button
