@@ -31,13 +31,23 @@ export default async function WorkoutSelectionPage() {
 
     return (
         <MobileContainer>
-            <main className="min-h-screen bg-background p-6">
+            <main className="min-h-screen bg-background p-6 pb-20">
                 {/* Header */}
                 <div className="mb-8">
-                    <Logo />
-                    <h1 className="font-teko text-3xl uppercase tracking-wider text-accent mt-4">
+                    <Logo size="small" />
+                    <Link href="/dashboard" className="text-primary/60 hover:text-accent mt-2 text-sm inline-block">
+                        ← TILLBAKA
+                    </Link>
+                </div>
+
+                {/* Title */}
+                <div className="mb-8">
+                    <h1 className="font-teko text-6xl uppercase tracking-wider text-accent mb-2">
                         VÄLJ TRÄNING
                     </h1>
+                    <p className="font-inter text-primary/80">
+                        Styrka, kondition eller hybrid.
+                    </p>
                 </div>
 
                 {/* Workout Cards */}
@@ -74,14 +84,6 @@ export default async function WorkoutSelectionPage() {
                         );
                     })}
                 </div>
-
-                {/* Back to Dashboard */}
-                <Link
-                    href="/dashboard"
-                    className="block mt-8 text-center font-inter text-sm uppercase tracking-wider text-primary/60 hover:text-accent transition-colors"
-                >
-                    ← Tillbaka till Dashboard
-                </Link>
             </main>
         </MobileContainer>
     );
