@@ -24,6 +24,7 @@ import PremiumPaywall from '@/components/premium/PremiumPaywall';
 import { useDailyLog } from '@/hooks/useDailyLog';
 import { usePremium } from '@/hooks/usePremium';
 import { useDiet } from '@/hooks/useDiet';
+import { useSquadNotifications } from '@/hooks/useSquadNotifications';
 import { calculateRecoveryStatus } from '@/lib/logic/recovery';
 import { dbToUi } from '@/lib/utils/scales';
 import { getDayNumber } from '@/lib/utils/dates';
@@ -51,6 +52,7 @@ export default function DashboardClient({ user, profile }: DashboardClientProps)
 
     const { isPremium, redeemVipCode, refreshStatus } = usePremium(user.id);
     const { availableDiets, selectedDiet, selectDiet } = useDiet(user.id);
+    const { hasNotifications, count: notificationCount } = useSquadNotifications(user.id);
 
     const [showMorningCheckin, setShowMorningCheckin] = useState(false);
     const [showNightWatch, setShowNightWatch] = useState(false);
@@ -333,18 +335,29 @@ export default function DashboardClient({ user, profile }: DashboardClientProps)
                         </button>
                     )}
 
-                    {/* Squad Link */}
+                    {/* Squad Link - Redesigned */}
                     {isPremium ? (
                         <Link
                             href="/squad"
-                            className="block w-full px-8 py-4 bg-surface text-primary font-inter font-semibold text-sm uppercase tracking-wider border-2 border-primary/20 hover:border-accent hover:text-accent transition-all text-center"
+                            onClick={() => localStorage.setItem('last_squad_visit', new Date().toISOString())}
+                            className="relative block w-full py-8 bg-surface text-primary font-inter font-bold text-xl uppercase tracking-wider border-2 border-primary/20 hover:border-accent hover:text-accent transition-all text-center group"
                         >
-                            ⚔️ PLUTONEN
+                            <span className="flex items-center justify-center gap-3">
+                                ⚔️ PLUTONEN
+                                {hasNotifications && (
+                                    <span className="absolute top-4 right-4 flex h-6 w-6 items-center justify-center rounded-full bg-status-red text-xs text-white animate-pulse">
+                                        {notificationCount > 9 ? '9+' : notificationCount}
+                                    </span>
+                                )}
+                            </span>
+                            <span className="block text-xs font-normal text-primary/60 mt-1 group-hover:text-accent/80">
+                                GEMENSKAP & PEPP
+                            </span>
                         </Link>
                     ) : (
                         <button
                             onClick={() => setShowPremiumPaywall(true)}
-                            className="w-full px-8 py-4 bg-surface text-primary/60 font-inter font-semibold text-sm uppercase tracking-wider border-2 border-primary/20 hover:border-accent hover:text-accent transition-all text-center"
+                            className="w-full py-8 bg-surface text-primary/60 font-inter font-bold text-xl uppercase tracking-wider border-2 border-primary/20 hover:border-accent hover:text-accent transition-all text-center"
                         >
                             🔒 PLUTONEN
                         </button>
