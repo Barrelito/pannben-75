@@ -126,7 +126,9 @@ export function useSquadFeed(squadId: string, userId: string) {
             });
 
         if (error) throw error;
-        // fetchPosts triggered by subscription
+
+        // Refresh immediately (don't rely solely on subscription)
+        await fetchPosts();
     };
 
     const toggleLike = async (postId: string, currentHasLiked: boolean) => {

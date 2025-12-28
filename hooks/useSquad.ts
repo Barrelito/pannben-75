@@ -189,6 +189,11 @@ export function useSquad(userId: string): UseSquadResult {
         setError(null);
 
         try {
+            // Validate name - prevent accidental code entry
+            if (/^[A-Z0-9]{4}-[A-Z0-9]{2}$/.test(name.toUpperCase())) {
+                throw new Error('Detta ser ut som en inbjudningskod. Använd "Gå med" istället för att skapa nytt.');
+            }
+
             // Generate unique invite code
             let inviteCode = generateInviteCode();
 
