@@ -9,6 +9,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import MobileContainer from '@/components/layout/MobileContainer';
+import Logo from '@/components/ui/Logo';
 import OnboardingSlide from '@/components/onboarding/OnboardingSlide';
 import ProgressDots from '@/components/onboarding/ProgressDots';
 
@@ -272,11 +273,9 @@ export default function OnboardingPage() {
         <MobileContainer>
             <div className="min-h-screen bg-background flex flex-col p-6">
                 {/* Header */}
-                <div className="text-center mb-8">
-                    <h1 className="font-teko font-bold uppercase tracking-wider leading-none">
-                        <span className="block text-5xl text-primary">#PANNBEN</span>
-                        <span className="block text-6xl text-accent -mt-2">75</span>
-                    </h1>
+                {/* Header */}
+                <div className="mb-8">
+                    <Logo />
                 </div>
 
                 {/* Content */}
