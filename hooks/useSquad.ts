@@ -268,15 +268,16 @@ export function useSquad(userId: string): UseSquadResult {
                 throw new Error('Ogiltig kod');
             }
 
-            // Check if user is already in a squad
+            // Check if user is already in THIS specific squad
             const { data: existingMembership } = await supabase
                 .from('squad_members')
                 .select('id')
                 .eq('user_id', userId)
+                .eq('squad_id', foundSquad.id)
                 .maybeSingle();
 
             if (existingMembership) {
-                throw new Error('Du är redan med i en pluton');
+                throw new Error('Du är redan med i denna pluton');
             }
 
             // Add user to squad
