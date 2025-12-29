@@ -10,6 +10,9 @@ export interface DailyTargets {
     workouts: number;
     requireOutdoor: boolean;
     workoutDuration: number; // in minutes, 0 = any duration
+    workoutLabel: string; // Display label for the workout rule
+    workoutSublabel: string; // Sub-label for the workout rule
+    weeklyHardWorkouts: number; // Weekly hard workout requirement (0 for Easy/Hard)
 
     // Hydration
     waterLiters: number;
@@ -36,7 +39,10 @@ export function getDailyTargets(level: DifficultyLevel): DailyTargets {
             return {
                 workouts: 1,
                 requireOutdoor: false,
-                workoutDuration: 0, // No duration requirement
+                workoutDuration: 30, // 30 min movement
+                workoutLabel: 'DAGENS RÖRELSE',
+                workoutSublabel: '30 min · Promenad, lek, trädgård',
+                weeklyHardWorkouts: 0, // No weekly requirement
                 waterLiters: 2,
                 waterDisplay: '2 liter',
                 readingPages: 5,
@@ -45,24 +51,29 @@ export function getDailyTargets(level: DifficultyLevel): DailyTargets {
                     'Inget godis/skräpmat (Vardagar)',
                     'Alkohol tillåten',
                 ],
-                dietDisplay: 'Inget godis/skräpmat (Vardagar)',
+                dietDisplay: 'Inget godis (vardagar)',
                 photoRequired: false, // Photo is OPTIONAL on Easy
             };
 
         case 'medium':
             return {
-                workouts: 2,
-                requireOutdoor: true,
-                workoutDuration: 0, // No specific duration, but 1 must be outdoor
+                workouts: 1, // 1 daily activity (can be marked as hard)
+                requireOutdoor: false,
+                workoutDuration: 30, // 30 min daily activity
+                workoutLabel: 'DAGENS AKTIVITET',
+                workoutSublabel: '30 min · + 2 tuffa pass/vecka',
+                weeklyHardWorkouts: 2, // 2 hard workouts per week
                 waterLiters: 3,
                 waterDisplay: '3 liter',
                 readingPages: 10,
                 readingDisplay: '10 sidor',
                 dietRules: [
-                    'Inget socker/skräpmat (Alla dagar)',
+                    'Clean Eating',
+                    'Inget processat/socker',
+                    'Halva tallriken grönt',
                     'Ingen alkohol (Vardagar)',
                 ],
-                dietDisplay: 'Inget socker/skräpmat',
+                dietDisplay: 'Clean Eating',
                 photoRequired: true,
             };
 
@@ -71,6 +82,9 @@ export function getDailyTargets(level: DifficultyLevel): DailyTargets {
                 workouts: 2,
                 requireOutdoor: true,
                 workoutDuration: 45, // Each workout must be 45 min
+                workoutLabel: 'TRÄNINGSPASS',
+                workoutSublabel: '2 × 45 min · 1 utomhus',
+                weeklyHardWorkouts: 0, // All workouts are hard
                 waterLiters: 4,
                 waterDisplay: '4 liter',
                 readingPages: 10,
@@ -127,4 +141,27 @@ export function getLevelEmoji(level: DifficultyLevel): string {
         case 'hard':
             return '⚡';
     }
+}
+
+// Level order for upgrade/downgrade logic (0 = easiest, 2 = hardest)
+const LEVEL_ORDER: Record<DifficultyLevel, number> = {
+    easy: 0,
+    medium: 1,
+    hard: 2,
+};
+
+/**
+ * Check if changing from current to next level is a downgrade
+ * Downgrade = going to an easier level (requires reset)
+ */
+export function isDowngrade(current: DifficultyLevel, next: DifficultyLevel): boolean {
+    return LEVEL_ORDER[next] < LEVEL_ORDER[current];
+}
+
+/**
+ * Check if changing from current to next level is an upgrade
+ * Upgrade = going to a harder level (no reset required)
+ */
+export function isUpgrade(current: DifficultyLevel, next: DifficultyLevel): boolean {
+    return LEVEL_ORDER[next] > LEVEL_ORDER[current];
 }

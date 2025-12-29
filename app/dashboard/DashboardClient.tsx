@@ -53,6 +53,8 @@ export default function DashboardClient({ user, profile }: DashboardClientProps)
         updatePlanning,
         completeDay,
         logBonusWorkout,
+        toggleHardWorkout,
+        getWeeklyHardWorkouts,
         resetProgress,
     } = useDailyLog(user.id);
 
@@ -68,6 +70,7 @@ export default function DashboardClient({ user, profile }: DashboardClientProps)
     const [showPhotoUpload, setShowPhotoUpload] = useState(false);
     const [showGallery, setShowGallery] = useState(false);
     const [showPremiumPaywall, setShowPremiumPaywall] = useState(false);
+    const [weeklyHardWorkouts, setWeeklyHardWorkouts] = useState(0);
     const [showDayComplete, setShowDayComplete] = useState(false);
     const [dailyQuote, setDailyQuote] = useState(getRandomQuote());
 
@@ -101,6 +104,13 @@ export default function DashboardClient({ user, profile }: DashboardClientProps)
             setShowDayComplete(true);
         }
     }, [log?.is_completed]);
+
+    // Fetch weekly hard workouts for Medium level
+    useEffect(() => {
+        if (profile?.difficulty_level === 'medium') {
+            getWeeklyHardWorkouts().then(setWeeklyHardWorkouts);
+        }
+    }, [profile?.difficulty_level, getWeeklyHardWorkouts, log?.is_hard_workout]);
 
     // Calculate current day
     // @ts-ignore - profile type from server
@@ -392,6 +402,13 @@ export default function DashboardClient({ user, profile }: DashboardClientProps)
                             router.refresh();
                             return newXP;
                         }}
+                        onToggleHardWorkout={async (value) => {
+                            await toggleHardWorkout(value);
+                            // Refresh weekly count
+                            const count = await getWeeklyHardWorkouts();
+                            setWeeklyHardWorkouts(count);
+                        }}
+                        weeklyHardWorkouts={weeklyHardWorkouts}
                     />
 
                     {/* Workout Link */}

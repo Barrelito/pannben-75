@@ -33,6 +33,8 @@ interface UseDailyLogResult {
     updatePlanning: (planning: PlanningData) => Promise<void>;
     completeDay: () => Promise<void>;
     logBonusWorkout: () => Promise<number>;
+    toggleHardWorkout: (value: boolean) => Promise<void>;
+    getWeeklyHardWorkouts: () => Promise<number>;
     resetProgress: () => Promise<void>;
     refreshLog: () => Promise<void>;
 }
@@ -452,6 +454,76 @@ export function useDailyLog(userId: string): UseDailyLogResult {
     }, [userId, supabase, fetchLog]);
 
     /**
+     * Toggle hard workout flag for today (Medium level)
+     */
+    const toggleHardWorkout = useCallback(async (value: boolean) => {
+        setLoading(true);
+        setError(null);
+
+        try {
+            const today = getToday();
+
+            const { error: upsertError } = await supabase
+                .from('daily_logs')
+                .upsert({
+                    user_id: userId,
+                    log_date: today,
+                    is_hard_workout: value,
+                } as any, {
+                    onConflict: 'user_id,log_date',
+                });
+
+            if (upsertError) throw upsertError;
+
+            await fetchLog(today);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to toggle hard workout');
+            console.error('Error toggling hard workout:', err);
+            throw err;
+        } finally {
+            setLoading(false);
+        }
+    }, [userId, supabase, fetchLog]);
+
+    /**
+     * Get count of hard workouts for the current week (Monday-Sunday)
+     */
+    const getWeeklyHardWorkouts = useCallback(async (): Promise<number> => {
+        try {
+            // Calculate start and end of current week (Monday to Sunday)
+            const now = new Date();
+            const dayOfWeek = now.getDay();
+            const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+
+            const monday = new Date(now);
+            monday.setDate(now.getDate() + diffToMonday);
+            monday.setHours(0, 0, 0, 0);
+
+            const sunday = new Date(monday);
+            sunday.setDate(monday.getDate() + 6);
+            sunday.setHours(23, 59, 59, 999);
+
+            const mondayStr = monday.toISOString().split('T')[0];
+            const sundayStr = sunday.toISOString().split('T')[0];
+
+            const { data, error } = await supabase
+                .from('daily_logs')
+                .select('is_hard_workout')
+                .eq('user_id', userId)
+                .eq('is_hard_workout', true)
+                .gte('log_date', mondayStr)
+                .lte('log_date', sundayStr);
+
+            if (error) throw error;
+
+            return data?.length || 0;
+        } catch (err) {
+            console.error('Error getting weekly hard workouts:', err);
+            return 0;
+        }
+    }, [userId, supabase]);
+
+    /**
      * Hard Reset Progress
      * WARNING: Deletes all logs and resets profile
      */
@@ -526,6 +598,8 @@ export function useDailyLog(userId: string): UseDailyLogResult {
         updatePlanning,
         completeDay,
         logBonusWorkout,
+        toggleHardWorkout,
+        getWeeklyHardWorkouts,
         resetProgress,
         refreshLog,
     };

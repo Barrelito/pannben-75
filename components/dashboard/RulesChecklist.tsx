@@ -22,6 +22,8 @@ interface RulesChecklistProps {
     isPremium?: boolean;
     onShowPremiumPaywall?: () => void;
     onLogBonusWorkout?: () => Promise<number>; // Returns new XP total
+    onToggleHardWorkout?: (value: boolean) => Promise<void>; // For Medium level
+    weeklyHardWorkouts?: number; // Count of hard workouts this week
 }
 
 export default function RulesChecklist({
@@ -36,9 +38,12 @@ export default function RulesChecklist({
     isPremium = false,
     onShowPremiumPaywall,
     onLogBonusWorkout,
+    onToggleHardWorkout,
+    weeklyHardWorkouts = 0,
 }: RulesChecklistProps) {
     const [updatingRule, setUpdatingRule] = useState<RuleName | null>(null);
     const [loggingBonus, setLoggingBonus] = useState(false);
+    const [togglingHard, setTogglingHard] = useState(false);
 
     const targets = getDailyTargets(difficultyLevel);
 
@@ -76,12 +81,24 @@ export default function RulesChecklist({
     };
 
     // Build rules dynamically based on difficulty
+    // Easy: 1 workout (Dagens Rörelse)
+    // Medium: 1 workout (Dagens Aktivitet) + optional hard workout toggle
+    // Hard: 2 workouts (Utomhus + Inomhus)
     const rules = [
         { key: 'diet_completed' as RuleName, icon: '🍽️', label: 'DIET', sub: targets.dietDisplay, hasInfo: true, isPhoto: false, isOptional: false },
-        { key: 'workout_outdoor_completed' as RuleName, icon: '🏃', label: 'UTOMHUS', sub: targets.workoutDuration > 0 ? `${targets.workoutDuration} min · Friska luften` : 'Friska luften', hasInfo: false, isPhoto: false, isOptional: false },
-        // Show second workout only if level requires 2 workouts
+        // First workout with dynamic label
+        {
+            key: 'workout_outdoor_completed' as RuleName,
+            icon: difficultyLevel === 'hard' ? '🏃' : '🚶',
+            label: difficultyLevel === 'hard' ? 'UTOMHUS' : targets.workoutLabel,
+            sub: difficultyLevel === 'hard' ? `${targets.workoutDuration} min · Friska luften` : targets.workoutSublabel,
+            hasInfo: false,
+            isPhoto: false,
+            isOptional: false
+        },
+        // Second workout only for Hard level
         ...(targets.workouts >= 2 ? [
-            { key: 'workout_indoor_completed' as RuleName, icon: '🏋️', label: 'INOMHUS', sub: targets.workoutDuration > 0 ? `${targets.workoutDuration} min · Bygg pannben` : 'Bygg pannben', hasInfo: false, isPhoto: false, isOptional: false }
+            { key: 'workout_indoor_completed' as RuleName, icon: '🏋️', label: 'INOMHUS', sub: `${targets.workoutDuration} min · Bygg pannben`, hasInfo: false, isPhoto: false, isOptional: false }
         ] : []),
         { key: 'reading_completed' as RuleName, icon: '📖', label: 'LÄSNING', sub: targets.readingDisplay, hasInfo: false, isPhoto: false, isOptional: false },
         {
@@ -169,6 +186,62 @@ export default function RulesChecklist({
                     );
                 })}
             </div>
+
+            {/* Medium Level: Hard Workout Toggle & Weekly Counter */}
+            {difficultyLevel === 'medium' && log?.workout_outdoor_completed && onToggleHardWorkout && (
+                <div className="bg-surface border-2 border-yellow-500/30 rounded-xl p-4 space-y-3">
+                    {/* Weekly Progress Counter */}
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <span className="text-lg">🔥</span>
+                            <span className="font-inter text-sm text-primary/70">Veckans Tuffa Pass</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                            {[0, 1].map((i) => (
+                                <div
+                                    key={i}
+                                    className={`w-6 h-6 rounded-full border-2 flex items-center justify-center text-xs font-bold
+                                        ${i < weeklyHardWorkouts
+                                            ? 'border-yellow-500 bg-yellow-500/20 text-yellow-400'
+                                            : 'border-primary/20 text-primary/30'
+                                        }`}
+                                >
+                                    {i < weeklyHardWorkouts ? '✓' : (i + 1)}
+                                </div>
+                            ))}
+                            <span className="font-teko text-xl text-yellow-400 ml-2">
+                                {weeklyHardWorkouts}/2
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* Hard Workout Toggle */}
+                    <button
+                        onClick={async () => {
+                            setTogglingHard(true);
+                            try {
+                                await onToggleHardWorkout(!log?.is_hard_workout);
+                            } finally {
+                                setTogglingHard(false);
+                            }
+                        }}
+                        disabled={togglingHard}
+                        className={`w-full px-4 py-3 rounded-lg font-inter text-sm font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2
+                            ${log?.is_hard_workout
+                                ? 'bg-yellow-500/20 border-2 border-yellow-500 text-yellow-400'
+                                : 'bg-surface border-2 border-primary/20 text-primary/60 hover:border-yellow-500/50 hover:text-yellow-400'
+                            }`}
+                    >
+                        {togglingHard ? (
+                            'SPARAR...'
+                        ) : log?.is_hard_workout ? (
+                            <>💪 TUFFT PASS REGISTRERAT</>
+                        ) : (
+                            <>Var detta ett Tufft Pass? (45 min)</>
+                        )}
+                    </button>
+                </div>
+            )}
 
             {/* Bonus Workout Button - Shows after required workouts complete */}
             {requiredWorkoutsComplete && onLogBonusWorkout && (

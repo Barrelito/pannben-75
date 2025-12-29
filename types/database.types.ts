@@ -186,6 +186,7 @@ export interface DailyLog {
     // Status
     is_completed: boolean;
     bonus_completed: boolean; // Whether bonus workout was registered today (max 1/day)
+    is_hard_workout: boolean; // Whether daily workout was a "Tufft Pass" (Level 2)
 
     created_at: string; // ISO timestamp
     updated_at: string; // ISO timestamp

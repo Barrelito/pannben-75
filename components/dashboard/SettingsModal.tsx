@@ -13,7 +13,7 @@ import RedeemVip from '@/components/premium/RedeemVip';
 import CheckoutButton from '@/components/premium/CheckoutButton';
 import { createClient } from '@/lib/supabase/client';
 import { getToday } from '@/lib/utils/dates';
-import { getLevelDisplayName, getLevelDescription, getLevelEmoji, type DifficultyLevel } from '@/lib/gameRules';
+import { getLevelDisplayName, getLevelDescription, getLevelEmoji, isDowngrade, isUpgrade, type DifficultyLevel } from '@/lib/gameRules';
 
 interface SettingsModalProps {
     isOpen: boolean;
@@ -75,6 +75,55 @@ export default function SettingsModal({
     };
 
     const handleDifficultyChange = async (level: DifficultyLevel) => {
+        // Skip if same level
+        if (level === selectedDifficulty) return;
+
+        const currentLevel = selectedDifficulty;
+
+        // Check for downgrade (requires reset)
+        if (isDowngrade(currentLevel, level)) {
+            const confirmed = window.confirm(
+                `⚠️ VARNING\n\nByte från ${getLevelDisplayName(currentLevel)} till ${getLevelDisplayName(level)} nollställer din dag-progress.\n\n• Din dagräknare återställs till 0\n• Din XP behålls\n\nÄr du säker?`
+            );
+
+            if (!confirmed) return;
+
+            // Perform downgrade with reset
+            setSavingDifficulty(true);
+            try {
+                const { error } = await supabase
+                    .from('profiles')
+                    .update({
+                        difficulty_level: level,
+                        current_day: 0,
+                        start_date: null,
+                    })
+                    .eq('id', userId);
+
+                if (error) throw error;
+
+                setSelectedDifficulty(level);
+                alert('✅ Nivå ändrad! Din dagräknare har återställts.');
+                router.refresh();
+            } catch (error) {
+                console.error('Error downgrading:', error);
+                alert('Kunde inte ändra nivå. Försök igen.');
+            } finally {
+                setSavingDifficulty(false);
+            }
+            return;
+        }
+
+        // Check for upgrade
+        if (isUpgrade(currentLevel, level)) {
+            const confirmed = window.confirm(
+                `💪 UPPGRADERING\n\nDu byter till ${getLevelDisplayName(level)}.\n\n• Din dagräknare behålls\n• Reglerna blir tuffare\n• Du kan INTE byta tillbaka utan att nollställa\n\nFortsätt?`
+            );
+
+            if (!confirmed) return;
+        }
+
+        // Regular level change or confirmed upgrade
         setSavingDifficulty(true);
         try {
             const { error } = await supabase
