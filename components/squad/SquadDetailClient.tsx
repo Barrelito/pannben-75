@@ -164,11 +164,12 @@ export default function SquadDetailClient({ user, squadId }: SquadDetailClientPr
                         </button>
                     </div>
 
-                    {members.map((member) => (
+                    {members.map((member, index) => (
                         <SquadMemberCard
                             key={member.id}
                             member={member}
                             isCurrentUser={member.user_id === user.id}
+                            position={index + 1}
                         />
                     ))}
                 </div>

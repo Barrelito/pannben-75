@@ -10,6 +10,7 @@ import { createClient } from '@/lib/supabase/client';
 import { getToday } from '@/lib/utils/dates';
 import type { Squad, SquadMember as DBSquadMember } from '@/types/database.types';
 import type { RecoveryStatus } from '@/types/logic.types';
+import type { DifficultyLevel } from '@/lib/gameRules';
 
 export interface SquadMember {
     id: string;
@@ -20,10 +21,12 @@ export interface SquadMember {
     // From profiles (always present)
     username: string | null;
     display_name: string | null;
-    avatar_url: string | null; // Added
-    motto: string | null;      // Added
+    avatar_url: string | null;
+    motto: string | null;
     recovery_status: RecoveryStatus;
     current_day: number;
+    total_xp: number; // For leaderboard ranking
+    difficulty_level: DifficultyLevel; // Gnistan/Glöden/Pannben
 
     // From today's log (may be null if no log exists - LEFT JOIN!)
     workout_outdoor_completed: boolean | null;
@@ -126,7 +129,7 @@ export function useSquad(userId: string): UseSquadResult {
                 // Fetch profile
                 const { data: profile } = await supabase
                     .from('profiles')
-                    .select('username, display_name, recovery_status, current_day, avatar_url, motto')
+                    .select('username, display_name, recovery_status, current_day, avatar_url, motto, total_xp, difficulty_level')
                     .eq('id', member.user_id)
                     .single();
 
@@ -154,6 +157,8 @@ export function useSquad(userId: string): UseSquadResult {
                     motto: profile?.motto || null,
                     recovery_status: (profile?.recovery_status || 'GREEN') as RecoveryStatus,
                     current_day: profile?.current_day || 0,
+                    total_xp: profile?.total_xp || 0,
+                    difficulty_level: (profile?.difficulty_level || 'hard') as DifficultyLevel,
                     workout_outdoor_completed: log?.workout_outdoor_completed || null,
                     workout_indoor_completed: log?.workout_indoor_completed || null,
                     workouts_done,
@@ -162,8 +167,13 @@ export function useSquad(userId: string): UseSquadResult {
 
             const memberData = await Promise.all(memberPromises);
 
-            // Sort by current_day descending (highest streak first)
-            memberData.sort((a, b) => b.current_day - a.current_day);
+            // Sort: Primary by current_day DESC, Secondary by total_xp DESC
+            memberData.sort((a, b) => {
+                if (b.current_day !== a.current_day) {
+                    return b.current_day - a.current_day;
+                }
+                return b.total_xp - a.total_xp;
+            });
 
             setMembers(memberData);
         } catch (err) {
