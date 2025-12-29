@@ -9,7 +9,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSquad } from '@/hooks/useSquad';
 import MobileContainer from '@/components/layout/MobileContainer';
-import Logo from '@/components/ui/Logo';
+import Header from '@/components/layout/Header';
 import SquadMemberCard from '@/components/squad/SquadMemberCard';
 import SquadFeed from '@/components/squad/SquadFeed';
 import type { User } from '@supabase/supabase-js';
@@ -100,12 +100,7 @@ export default function SquadDetailClient({ user, squadId }: SquadDetailClientPr
         <MobileContainer>
             <div className="min-h-screen bg-background pb-20 p-6">
                 {/* Header */}
-                <div className="flex items-center justify-between mb-8">
-                    <Logo />
-                    <button onClick={() => router.push('/squad')} className="text-primary/60 hover:text-accent">
-                        TILL LOBBYN
-                    </button>
-                </div>
+                <Header backHref="/squad" />
 
                 {/* Squad Info */}
                 <div className="mb-8 border-b-2 border-primary/20 pb-8">

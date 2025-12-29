@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import MobileContainer from '@/components/layout/MobileContainer';
-import Logo from '@/components/ui/Logo';
+import Header from '@/components/layout/Header';
 import AvatarUpload from '@/components/profile/AvatarUpload';
 import type { User } from '@supabase/supabase-js';
 
@@ -103,12 +103,7 @@ export default function ProfilePage() {
         <MobileContainer>
             <div className="min-h-screen bg-background pb-20 p-6">
                 {/* Header */}
-                <div className="flex items-center justify-between mb-8">
-                    <Logo />
-                    <button onClick={() => router.back()} className="text-primary/60 hover:text-accent">
-                        TILLBAKA
-                    </button>
-                </div>
+                <Header />
 
                 <div className="mb-8 text-center">
                     <h1 className="font-teko text-5xl uppercase tracking-wider text-accent mb-2">

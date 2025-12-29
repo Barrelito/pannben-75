@@ -7,7 +7,7 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import Link from 'next/link';
 import MobileContainer from '@/components/layout/MobileContainer';
-import Logo from '@/components/ui/Logo';
+import ServerHeader from '@/components/layout/ServerHeader';
 
 export default async function WorkoutSelectionPage() {
     const supabase = await createClient();
@@ -33,12 +33,7 @@ export default async function WorkoutSelectionPage() {
         <MobileContainer>
             <main className="min-h-screen bg-background p-6 pb-20">
                 {/* Header */}
-                <div className="mb-8">
-                    <Logo size="small" />
-                    <Link href="/dashboard" className="text-primary/60 hover:text-accent mt-2 text-sm inline-block">
-                        ← TILLBAKA
-                    </Link>
-                </div>
+                <ServerHeader />
 
                 {/* Title */}
                 <div className="mb-8">

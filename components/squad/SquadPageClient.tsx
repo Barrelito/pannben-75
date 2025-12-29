@@ -9,7 +9,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSquad } from '@/hooks/useSquad';
 import MobileContainer from '@/components/layout/MobileContainer';
-import Logo from '@/components/ui/Logo';
+import Header from '@/components/layout/Header';
 import SquadCard from '@/components/squad/SquadCard';
 import CreateSquadModal from '@/components/squad/CreateSquadModal';
 import JoinSquadModal from '@/components/squad/JoinSquadModal';
@@ -57,12 +57,7 @@ export default function SquadPageClient({ user }: { user: User }) {
         <MobileContainer>
             <div className="min-h-screen bg-background pb-20 p-6">
                 {/* Header */}
-                <div className="mb-8">
-                    <Logo />
-                    <button onClick={() => router.push('/dashboard')} className="text-primary/60 hover:text-accent mt-2 text-sm">
-                        ← TILLBAKA
-                    </button>
-                </div>
+                <Header />
 
                 <div className="mb-8">
                     <h1 className="font-teko text-5xl uppercase tracking-wider text-accent mb-2">
