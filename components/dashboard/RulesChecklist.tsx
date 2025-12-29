@@ -171,13 +171,13 @@ export default function RulesChecklist({
                             </div>
 
                             {/* Diet Info Button (Integrated) */}
-                            {rule.hasInfo && (
+                            {rule.hasInfo && difficultyLevel !== 'easy' && (
                                 <button
                                     onClick={(e) => {
                                         e.stopPropagation();
                                         isPremium ? onShowDietInfo?.() : onShowPremiumPaywall?.();
                                     }}
-                                    className="absolute bottom-2 right-14 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-surface/50 text-primary/40 hover:text-accent hover:bg-surface border border-transparent hover:border-accent/20 transition-all"
+                                    className="absolute bottom-2 right-14 z-20 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-surface/50 text-primary/40 hover:text-accent hover:bg-surface border border-transparent hover:border-accent/20 transition-all"
                                 >
                                     {selectedDietName || 'VÄLJ DIET'}
                                 </button>

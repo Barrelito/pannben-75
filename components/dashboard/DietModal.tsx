@@ -15,6 +15,7 @@ interface DietModalProps {
     availableDiets: DietTrack[];
     selectedDiet: DietTrack | null;
     onSelectDiet: (dietId: string) => Promise<void>;
+    readOnly?: boolean; // When true, only shows rules without ability to change
 }
 
 export default function DietModal({
@@ -23,9 +24,10 @@ export default function DietModal({
     availableDiets,
     selectedDiet,
     onSelectDiet,
+    readOnly = false,
 }: DietModalProps) {
     const [loading, setLoading] = useState(false);
-    const [showSelection, setShowSelection] = useState(!selectedDiet);
+    const [showSelection, setShowSelection] = useState(!selectedDiet && !readOnly);
 
     const handleSelect = async (dietId: string) => {
         setLoading(true);
@@ -83,8 +85,8 @@ export default function DietModal({
 
     return (
         <Modal isOpen={isOpen} onClose={onClose} title="DIET">
-            {/* Selection View */}
-            {showSelection ? (
+            {/* Selection View - Only if not readOnly and no diet selected */}
+            {!readOnly && showSelection ? (
                 <div className="space-y-4">
                     <p className="font-inter text-sm text-primary/80">
                         Välj en diet att följa
@@ -125,14 +127,30 @@ export default function DietModal({
 
                     {renderRules(selectedDiet.rules)}
 
-                    <button
-                        onClick={() => setShowSelection(true)}
-                        className="w-full px-6 py-3 bg-surface text-primary font-inter font-semibold text-sm uppercase tracking-wider border-2 border-primary/20 hover:border-accent hover:text-accent transition-all"
-                    >
-                        BYT DIET
-                    </button>
+                    {/* Only show "Byt Diet" button if not readOnly */}
+                    {!readOnly && (
+                        <button
+                            onClick={() => setShowSelection(true)}
+                            className="w-full px-6 py-3 bg-surface text-primary font-inter font-semibold text-sm uppercase tracking-wider border-2 border-primary/20 hover:border-accent hover:text-accent transition-all"
+                        >
+                            BYT DIET
+                        </button>
+                    )}
                 </div>
-            ) : null}
+            ) : (
+                /* No diet selected - show message */
+                <div className="text-center py-8">
+                    <p className="font-inter text-primary/60">
+                        Ingen diet vald.
+                    </p>
+                    {readOnly && (
+                        <p className="font-inter text-xs text-primary/40 mt-2">
+                            (Välj diet vid nästa omstart)
+                        </p>
+                    )}
+                </div>
+            )}
         </Modal>
     );
 }
+

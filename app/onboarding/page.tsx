@@ -5,7 +5,7 @@
 
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import MobileContainer from '@/components/layout/MobileContainer';
@@ -15,6 +15,7 @@ import ProgressDots from '@/components/onboarding/ProgressDots';
 import LevelSelector from '@/components/onboarding/LevelSelector';
 import { LEVEL_INFO } from '@/lib/onboardingData';
 import { getDailyTargets, type DifficultyLevel } from '@/lib/gameRules';
+import Modal from '@/components/ui/Modal'; // Assuming generic Modal is available or use logic inline
 
 export default function OnboardingPage() {
     const router = useRouter();
@@ -43,12 +44,69 @@ export default function OnboardingPage() {
 
     const TOTAL_STEPS = getStepsForLevel(selectedLevel);
 
+    const [availableDiets, setAvailableDiets] = useState<any[]>([]);
+    const [selectedDietId, setSelectedDietId] = useState<string | null>(null);
+    const [viewingDietRules, setViewingDietRules] = useState<any | null>(null);
+
+    // Fetch diets and user profile on mount
+    useEffect(() => {
+        const initData = async () => {
+            // Fetch diets
+            const { data: diets } = await supabase
+                .from('diet_tracks')
+                .select('*')
+                .order('name');
+            if (diets) setAvailableDiets(diets);
+
+            // Fetch user profile (to pre-fill if restarting)
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                const { data: profile } = await supabase
+                    .from('profiles')
+                    .select('display_name, avatar_url')
+                    .eq('id', user.id)
+                    .single();
+
+                if (profile) {
+                    if (profile.display_name) setDisplayName(profile.display_name);
+                    if (profile.avatar_url) setAvatarPreview(profile.avatar_url);
+                }
+            }
+        };
+        initData();
+    }, [supabase]);
+
     const handleLevelSelect = (level: DifficultyLevel) => {
         setSelectedLevel(level);
         setStep(1); // Move to first content slide
     };
 
     const handleNext = () => {
+        // Validation for Diet step (index 1) on Hard level
+        if (step === 1 + (selectedLevel ? 0 : 0) && selectedLevel === 'hard' && !selectedDietId) {
+            // Adjust index logic: step 0 is level selector. step 1 is first slide (Welcome).
+            // Actually:
+            // Step 0: Selector
+            // Step 1: Welcome
+            // Step 2: Diet
+            // Let's check the renderStep switch logic:
+            // contentStep = step - 1;
+            // case 1 is Diet. So step = 2 is Diet.
+            // Wait, previous code says case 1: Diet.
+        }
+
+        // Correct logic based on renderStep:
+        // step 0 = Level Selector
+        // step 1 (contentStep 0) = Welcome
+        // step 2 (contentStep 1) = Diet
+
+        if (step === 2 && (selectedLevel === 'hard' || selectedLevel === 'medium') && !selectedDietId) {
+            setError('Du måste välja en diet för att gå vidare.');
+            return;
+        }
+
+        setError('');
+
         if (step < TOTAL_STEPS - 1) {
             setStep(step + 1);
         }
@@ -57,6 +115,7 @@ export default function OnboardingPage() {
     const handleBack = () => {
         if (step > 0) {
             setStep(step - 1);
+            setError('');
         }
     };
 
@@ -120,14 +179,26 @@ export default function OnboardingPage() {
                 }
             }
 
-            // Save profile with selected difficulty level
+            // Save profile with selected difficulty level and diet
+            const updateData: any = {
+                display_name: displayName.trim(),
+                difficulty_level: selectedLevel || 'hard',
+            };
+
+            // Only update avatar if a new one was uploaded
+            if (avatarUrl) {
+                updateData.avatar_url = avatarUrl;
+            }
+
+            // Only save diet if one was selected (required for hard, optional/null otherwise?)
+            // Actually, for easy/medium we might not set it, or set null.
+            if (selectedDietId) {
+                updateData.selected_diet_id = selectedDietId;
+            }
+
             const { error: updateError } = await supabase
                 .from('profiles')
-                .update({
-                    display_name: displayName.trim(),
-                    avatar_url: avatarUrl,
-                    difficulty_level: selectedLevel || 'hard',
-                })
+                .update(updateData)
                 .eq('id', user.id);
 
             if (updateError) {
@@ -148,6 +219,35 @@ export default function OnboardingPage() {
     // Get targets for the selected level
     const targets = selectedLevel ? getDailyTargets(selectedLevel) : null;
     const levelInfo = selectedLevel ? LEVEL_INFO[selectedLevel] : null;
+
+    // Helper to render diet rules (reused from DietModal logic)
+    const renderDietRules = (rules: any) => {
+        if (!rules) return null;
+        return (
+            <div className="space-y-4">
+                {rules.allowed && rules.allowed.length > 0 && (
+                    <div>
+                        <h3 className="font-inter text-xs uppercase tracking-wider text-status-green mb-2">✓ TILLÅTET</h3>
+                        <ul className="space-y-1">
+                            {rules.allowed.map((item: string, idx: number) => (
+                                <li key={idx} className="font-inter text-sm text-primary/80">• {item}</li>
+                            ))}
+                        </ul>
+                    </div>
+                )}
+                {rules.avoid && rules.avoid.length > 0 && (
+                    <div>
+                        <h3 className="font-inter text-xs uppercase tracking-wider text-status-red mb-2">✗ UNDVIK</h3>
+                        <ul className="space-y-1">
+                            {rules.avoid.map((item: string, idx: number) => (
+                                <li key={idx} className="font-inter text-sm text-primary/80">• {item}</li>
+                            ))}
+                        </ul>
+                    </div>
+                )}
+            </div>
+        );
+    };
 
     const renderStep = () => {
         // Step 0: Level Selection
@@ -175,14 +275,88 @@ export default function OnboardingPage() {
                 );
 
             case 1: // Diet
+                if (selectedLevel === 'hard' || selectedLevel === 'medium') {
+                    return (
+                        <>
+                            <OnboardingSlide icon="🍽️" title="VÄLJ DIN DIET">
+                                <p className="mb-6">
+                                    För <strong>{selectedLevel === 'hard' ? 'PANNBEN' : 'GLÖDEN'}</strong> ({selectedLevel === 'hard' ? 'Hard' : 'Medium'}) väljer du en kostplan att följa.
+                                </p>
+                                <div className="space-y-4">
+                                    {availableDiets.map((diet) => (
+                                        <div
+                                            key={diet.id}
+                                            onClick={() => setSelectedDietId(diet.id)}
+                                            className={`relative p-4 border-2 transition-all cursor-pointer ${selectedDietId === diet.id
+                                                ? 'bg-accent/10 border-accent'
+                                                : 'bg-surface border-primary/20 hover:border-primary/50'
+                                                }`}
+                                        >
+                                            <div className="flex justify-between items-start mb-2">
+                                                <h3 className={`font-teko text-2xl uppercase tracking-wider ${selectedDietId === diet.id ? 'text-accent' : 'text-primary'
+                                                    }`}>
+                                                    {diet.name}
+                                                </h3>
+                                                {selectedDietId === diet.id && (
+                                                    <span className="text-xl">✅</span>
+                                                )}
+                                            </div>
+                                            <p className="font-inter text-sm text-primary/80 mb-3">
+                                                {diet.description}
+                                            </p>
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setViewingDietRules(diet);
+                                                }}
+                                                className="text-xs font-bold uppercase tracking-wider text-primary/60 hover:text-accent underline"
+                                            >
+                                                LÄS REGLER
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </OnboardingSlide>
+
+                            {/* Rules Modal */}
+                            {viewingDietRules && (
+                                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm" onClick={() => setViewingDietRules(null)}>
+                                    <div className="bg-surface border-2 border-accent w-full max-w-md max-h-[80vh] overflow-y-auto p-6 shadow-2xl" onClick={e => e.stopPropagation()}>
+                                        <div className="flex justify-between items-start mb-6">
+                                            <div>
+                                                <h2 className="font-teko text-3xl uppercase tracking-wider text-accent">
+                                                    {viewingDietRules.name}
+                                                </h2>
+                                                <p className="font-inter text-sm text-primary/60">Regler</p>
+                                            </div>
+                                            <button
+                                                onClick={() => setViewingDietRules(null)}
+                                                className="text-2xl text-primary/60 hover:text-primary"
+                                            >
+                                                ✕
+                                            </button>
+                                        </div>
+                                        {renderDietRules(viewingDietRules.rules)}
+                                        <button
+                                            onClick={() => setViewingDietRules(null)}
+                                            className="w-full mt-6 px-6 py-3 bg-accent text-background font-inter font-semibold text-sm uppercase tracking-wider hover:bg-white transition-colors"
+                                        >
+                                            STÄNG
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </>
+                    );
+                }
+
+                // Default view for Easy/Medium
                 return (
                     <OnboardingSlide icon="🍽️" title="DIET">
                         <p className="mb-4">
                             {selectedLevel === 'easy'
                                 ? 'Undvik godis och skräpmat på vardagar.'
-                                : selectedLevel === 'medium'
-                                    ? 'Inget socker eller skräpmat. Ingen alkohol på vardagar.'
-                                    : 'Strikt diet utan undantag. Ingen alkohol.'}
+                                : 'Inget socker eller skräpmat. Ingen alkohol på vardagar.'}
                         </p>
                         <div className="text-left space-y-3 bg-surface border-2 border-primary/10 p-4">
                             <p className="font-bold text-accent mb-2">Regler:</p>

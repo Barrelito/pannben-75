@@ -7,6 +7,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useRunCoach } from '@/hooks/useRunCoach';
+import { useRunningProgress } from '@/hooks/useRunningProgress';
 import type { Session } from '@/lib/data/runningProgram';
 import MobileContainer from '@/components/layout/MobileContainer';
 import { createClient } from '@/lib/supabase/client';
@@ -32,6 +33,7 @@ export default function SessionPlayer({ session, userId }: SessionPlayerProps) {
         stop,
     } = useRunCoach(session);
 
+    const { markSessionComplete } = useRunningProgress();
     const supabase = createClient();
 
     // Format time as MM:SS
@@ -71,6 +73,9 @@ export default function SessionPlayer({ session, userId }: SessionPlayerProps) {
     };
 
     const handleComplete = async () => {
+        // Mark session as complete in running progress
+        markSessionComplete(session.id);
+
         // Navigate immediately, don't wait for DB update
         router.push('/dashboard');
 

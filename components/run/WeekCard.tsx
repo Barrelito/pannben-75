@@ -7,6 +7,7 @@
 
 import { useRouter } from 'next/navigation';
 import type { Week } from '@/lib/data/runningProgram';
+import { useRunningProgress } from '@/hooks/useRunningProgress';
 
 interface WeekCardProps {
     week: Week;
@@ -14,6 +15,7 @@ interface WeekCardProps {
 
 export default function WeekCard({ week }: WeekCardProps) {
     const router = useRouter();
+    const { isSessionComplete } = useRunningProgress();
 
     return (
         <div className="bg-surface border-2 border-primary/20 p-6">
@@ -34,26 +36,36 @@ export default function WeekCard({ week }: WeekCardProps) {
             </div>
 
             <div className="space-y-3">
-                {week.sessions.map((session) => (
-                    <button
-                        key={session.id}
-                        onClick={() => router.push(`/run/session/${session.id}`)}
-                        className="w-full bg-background border border-primary/10 p-4 hover:border-accent transition-colors flex justify-between items-center group"
-                    >
-                        <div className="text-left">
-                            <p className="font-inter font-bold text-primary group-hover:text-accent transition-colors">
-                                Pass {session.sessionNumber}
-                            </p>
-                            <p className="font-inter text-xs text-primary/60">
-                                {session.totalMinutes} minuter
-                            </p>
-                        </div>
-                        <div className="text-2xl group-hover:scale-110 transition-transform">
-                            🏃
-                        </div>
-                    </button>
-                ))}
+                {week.sessions.map((session) => {
+                    const isComplete = isSessionComplete(session.id);
+
+                    return (
+                        <button
+                            key={session.id}
+                            onClick={() => router.push(`/run/session/${session.id}`)}
+                            className={`w-full border p-4 transition-colors flex justify-between items-center group ${isComplete
+                                    ? 'bg-status-green/10 border-status-green'
+                                    : 'bg-background border-primary/10 hover:border-accent'
+                                }`}
+                        >
+                            <div className="text-left">
+                                <p className={`font-inter font-bold transition-colors ${isComplete ? 'text-status-green' : 'text-primary group-hover:text-accent'
+                                    }`}>
+                                    Pass {session.sessionNumber}
+                                    {isComplete && <span className="ml-2">✓</span>}
+                                </p>
+                                <p className="font-inter text-xs text-primary/60">
+                                    {session.totalMinutes} minuter
+                                </p>
+                            </div>
+                            <div className="text-2xl group-hover:scale-110 transition-transform">
+                                {isComplete ? '✅' : '🏃'}
+                            </div>
+                        </button>
+                    );
+                })}
             </div>
         </div>
     );
 }
+

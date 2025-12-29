@@ -31,7 +31,8 @@ import { calculateRecoveryStatus } from '@/lib/logic/recovery';
 import { dbToUi } from '@/lib/utils/scales';
 import { getDayNumber } from '@/lib/utils/dates';
 import { createClient } from '@/lib/supabase/client';
-import { getDailyTargets } from '@/lib/gameRules';
+import { getDailyTargets, type DifficultyLevel } from '@/lib/gameRules';
+import { calculateRank } from '@/lib/gamification';
 import type { User } from '@supabase/supabase-js';
 import type { Profile } from '@/types/database.types';
 import type { MorningScoresUI } from '@/types/logic.types';
@@ -152,6 +153,9 @@ export default function DashboardClient({ user, profile }: DashboardClientProps)
         router.refresh();
     };
 
+    // Calculate Rank
+    const rank = calculateRank(profile?.total_xp || 0);
+
     return (
         <MobileContainer>
             <main className="min-h-screen bg-background pb-20">
@@ -176,14 +180,16 @@ export default function DashboardClient({ user, profile }: DashboardClientProps)
                     }}
                 />
 
-                {showDayComplete && (
-                    <DayCompleteOverlay
-                        quote={dailyQuote}
-                        isPremium={isPremium}
-                        onClose={() => setShowDayComplete(false)}
-                        onShowPremiumPaywall={() => setShowPremiumPaywall(true)}
-                    />
-                )}
+                {
+                    showDayComplete && (
+                        <DayCompleteOverlay
+                            quote={dailyQuote}
+                            isPremium={isPremium}
+                            onClose={() => setShowDayComplete(false)}
+                            onShowPremiumPaywall={() => setShowPremiumPaywall(true)}
+                        />
+                    )
+                }
 
                 <SettingsModal
                     isOpen={showSettings}
@@ -203,78 +209,83 @@ export default function DashboardClient({ user, profile }: DashboardClientProps)
                 />
 
                 {/* Premium Success Toast */}
-                {showPremiumSuccess && (
-                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-6">
-                        <div className="bg-surface border-2 border-accent p-8 max-w-sm text-center">
-                            <div className="text-6xl mb-4">🎉</div>
-                            <h2 className="font-teko text-3xl uppercase tracking-wider text-accent mb-2">
-                                TACK FÖR KÖPET!
-                            </h2>
-                            <p className="font-inter text-primary/80 mb-6">
-                                Premium är nu aktiverat. Njut av alla funktioner!
-                            </p>
-                            <button
-                                onClick={() => setShowPremiumSuccess(false)}
-                                className="w-full px-8 py-4 bg-accent text-background font-inter font-semibold text-sm uppercase tracking-wider border-2 border-accent hover:bg-transparent hover:text-accent transition-all"
-                            >
-                                STÄNG
-                            </button>
+                {
+                    showPremiumSuccess && (
+                        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-6">
+                            <div className="bg-surface border-2 border-accent p-8 max-w-sm text-center">
+                                <div className="text-6xl mb-4">🎉</div>
+                                <h2 className="font-teko text-3xl uppercase tracking-wider text-accent mb-2">
+                                    TACK FÖR KÖPET!
+                                </h2>
+                                <p className="font-inter text-primary/80 mb-6">
+                                    Premium är nu aktiverat. Njut av alla funktioner!
+                                </p>
+                                <button
+                                    onClick={() => setShowPremiumSuccess(false)}
+                                    className="w-full px-8 py-4 bg-accent text-background font-inter font-semibold text-sm uppercase tracking-wider border-2 border-accent hover:bg-transparent hover:text-accent transition-all"
+                                >
+                                    STÄNG
+                                </button>
+                            </div>
                         </div>
-                    </div>
-                )}
+                    )
+                }
 
-                {/* Diet Modal */}
+                {/* Diet Modal - Read Only (diet selection is done in onboarding) */}
                 <DietModal
                     isOpen={showDietModal}
                     onClose={() => setShowDietModal(false)}
                     availableDiets={availableDiets}
                     selectedDiet={selectedDiet}
                     onSelectDiet={selectDiet}
+                    readOnly={true}
                 />
 
                 {/* Photo Upload */}
-                {showPhotoUpload && (
-                    <PhotoUpload
-                        userId={user.id}
-                        currentPhotoUrl={log?.progress_photo_url || null}
-                        onPhotoUploaded={async (url) => {
-                            try {
-                                console.log('Saving photo URL:', url);
-                                const supabase = createClient();
-                                const today = new Date().toISOString().split('T')[0];
+                {
+                    showPhotoUpload && (
+                        <PhotoUpload
+                            userId={user.id}
+                            currentPhotoUrl={log?.progress_photo_url || null}
+                            onPhotoUploaded={async (url) => {
+                                try {
+                                    console.log('Saving photo URL:', url);
+                                    const supabase = createClient();
+                                    const today = new Date().toISOString().split('T')[0];
 
-                                // Upsert to ensure row exists
-                                const { data, error } = await supabase
-                                    .from('daily_logs')
-                                    .upsert({
-                                        user_id: user.id,
-                                        log_date: today,
-                                        progress_photo_url: url,
-                                        photo_uploaded: true,
-                                    }, {
-                                        onConflict: 'user_id,log_date'
-                                    })
-                                    .select();
+                                    // Upsert to ensure row exists
+                                    const { data, error } = await supabase
+                                        .from('daily_logs')
+                                        .upsert({
+                                            user_id: user.id,
+                                            log_date: today,
+                                            progress_photo_url: url,
+                                            photo_uploaded: true,
+                                        }, {
+                                            onConflict: 'user_id,log_date'
+                                        })
+                                        .select();
 
-                                if (error) {
-                                    console.error('Error saving photo URL:', error);
-                                    throw error;
+                                    if (error) {
+                                        console.error('Error saving photo URL:', error);
+                                        throw error;
+                                    }
+
+                                    console.log('Photo URL saved successfully:', data);
+
+                                    // Close modal and refresh
+                                    setShowPhotoUpload(false);
+                                    window.location.reload();
+                                } catch (error) {
+                                    console.error('Failed to save photo:', error);
+                                    alert('Fotot uppladdades men kunde inte sparas. Försök igen.');
+                                    setShowPhotoUpload(false);
                                 }
-
-                                console.log('Photo URL saved successfully:', data);
-
-                                // Close modal and refresh
-                                setShowPhotoUpload(false);
-                                window.location.reload();
-                            } catch (error) {
-                                console.error('Failed to save photo:', error);
-                                alert('Fotot uppladdades men kunde inte sparas. Försök igen.');
-                                setShowPhotoUpload(false);
-                            }
-                        }}
-                        onClose={() => setShowPhotoUpload(false)}
-                    />
-                )}
+                            }}
+                            onClose={() => setShowPhotoUpload(false)}
+                        />
+                    )
+                }
 
                 {/* Photo Gallery */}
                 {showGallery && <PhotoGallery userId={user.id} onClose={() => setShowGallery(false)} />}
@@ -333,12 +344,13 @@ export default function DashboardClient({ user, profile }: DashboardClientProps)
                                             🫡
                                         </div>
                                     )}
-                                    {/* Premium Badge */}
-                                    {isPremium && (
-                                        <div className="absolute bottom-0 right-0 w-8 h-8 bg-accent rounded-full border-4 border-background flex items-center justify-center text-sm shadow-lg z-10">
-                                            ✨
-                                        </div>
-                                    )}
+                                    {/* Rank Badge Insignia */}
+                                    <div
+                                        className="absolute bottom-0 right-0 w-8 h-8 bg-accent rounded-full border-4 border-background flex items-center justify-center text-sm shadow-lg z-10 cursor-help"
+                                        title={`Rank: ${rank.name}`}
+                                    >
+                                        {rank.emoji}
+                                    </div>
                                 </div>
 
                                 {/* Recovery Status Badge */}
@@ -504,7 +516,7 @@ export default function DashboardClient({ user, profile }: DashboardClientProps)
                     {/* Tools Section */}
                     <ToolsSection onOpenGallery={() => setShowGallery(true)} />
                 </div>
-            </main>
+            </main >
         </MobileContainer >
     );
 }
