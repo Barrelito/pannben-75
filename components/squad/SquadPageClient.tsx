@@ -57,7 +57,7 @@ export default function SquadPageClient({ user }: { user: User }) {
         <MobileContainer>
             <div className="min-h-screen bg-background pb-20 p-6">
                 {/* Header */}
-                <Header />
+                <Header backHref="/dashboard" />
 
                 <div className="mb-8">
                     <h1 className="font-teko text-5xl uppercase tracking-wider text-accent mb-2">
