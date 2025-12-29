@@ -71,10 +71,13 @@ export default function SessionPlayer({ session, userId }: SessionPlayerProps) {
     };
 
     const handleComplete = async () => {
-        // Mark outdoor workout as completed in daily_logs
+        // Navigate immediately, don't wait for DB update
+        router.push('/dashboard');
+
+        // Mark outdoor workout as completed in background
         try {
             const today = getToday();
-            const { error } = await supabase
+            await supabase
                 .from('daily_logs')
                 .upsert({
                     user_id: userId,
@@ -83,15 +86,9 @@ export default function SessionPlayer({ session, userId }: SessionPlayerProps) {
                 }, {
                     onConflict: 'user_id,log_date'
                 });
-
-            if (error) {
-                console.error('Failed to mark workout:', error);
-            }
         } catch (err) {
             console.error('Error updating log:', err);
         }
-
-        router.push('/dashboard');
     };
 
     if (status === 'COMPLETED') {
@@ -154,6 +151,13 @@ export default function SessionPlayer({ session, userId }: SessionPlayerProps) {
                                 </li>
                             ))}
                         </ul>
+                    </div>
+
+                    {/* Screen Reminder */}
+                    <div className="bg-accent/10 border border-accent p-4 mb-8">
+                        <p className="font-inter text-sm text-accent text-center">
+                            📱 Håll skärmen på under passet!
+                        </p>
                     </div>
 
                     <button

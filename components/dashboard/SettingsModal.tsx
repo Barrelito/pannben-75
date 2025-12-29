@@ -57,10 +57,10 @@ export default function SettingsModal({
         try {
             await onReset();
 
-            // Close and refresh
+            // Close modal and redirect to onboarding to choose new path
             setShowResetConfirm(false);
             onClose();
-            router.refresh();
+            router.push('/onboarding');
         } catch (error) {
             console.error('Error resetting:', error);
             alert('Kunde inte återställa. Försök igen.');
