@@ -1,17 +1,18 @@
 /**
  * Rules Checklist Component
- * Tracks completion of the 5 mandatory rules
+ * Tracks completion of the 5 mandatory rules (with dynamic targets based on difficulty)
  */
 
 'use client';
 
 import { useState } from 'react';
-
+import { getDailyTargets, type DifficultyLevel } from '@/lib/gameRules';
 import type { DailyLog } from '@/types/database.types';
 import type { RuleName } from '@/types/logic.types';
 
 interface RulesChecklistProps {
     log: DailyLog | null;
+    difficultyLevel: DifficultyLevel;
     onToggleRule: (rule: RuleName, value: boolean) => Promise<void>;
     onUpdateWater: (liters: number) => Promise<void>;
     onShowDietInfo?: () => void;
@@ -20,10 +21,12 @@ interface RulesChecklistProps {
     onViewPhoto?: () => void;
     isPremium?: boolean;
     onShowPremiumPaywall?: () => void;
+    onLogBonusWorkout?: () => Promise<number>; // Returns new XP total
 }
 
 export default function RulesChecklist({
     log,
+    difficultyLevel,
     onToggleRule,
     onUpdateWater,
     onShowDietInfo,
@@ -32,8 +35,12 @@ export default function RulesChecklist({
     onViewPhoto,
     isPremium = false,
     onShowPremiumPaywall,
+    onLogBonusWorkout,
 }: RulesChecklistProps) {
     const [updatingRule, setUpdatingRule] = useState<RuleName | null>(null);
+    const [loggingBonus, setLoggingBonus] = useState(false);
+
+    const targets = getDailyTargets(difficultyLevel);
 
     const handleToggle = async (rule: RuleName, value: boolean) => {
         setUpdatingRule(rule);
@@ -52,13 +59,49 @@ export default function RulesChecklist({
         }
     };
 
+    const handleBonusWorkout = async () => {
+        if (!onLogBonusWorkout) return;
+        setLoggingBonus(true);
+        try {
+            const newXP = await onLogBonusWorkout();
+            // Show success feedback
+            alert(`💪 Bonuspass registrerat! +20 XP\nTotal: ${newXP} XP`);
+        } catch (err) {
+            if (err instanceof Error && err.message.includes('already registered')) {
+                alert('Du har redan registrerat ett bonuspass idag!');
+            }
+        } finally {
+            setLoggingBonus(false);
+        }
+    };
+
+    // Build rules dynamically based on difficulty
     const rules = [
-        { key: 'diet_completed' as RuleName, icon: '🍽️', label: 'DIET', sub: 'Inga undantag', hasInfo: true, isPhoto: false },
-        { key: 'workout_outdoor_completed' as RuleName, icon: '🏃', label: 'UTOMHUS', sub: '45 min · Friska luften', hasInfo: false, isPhoto: false },
-        { key: 'workout_indoor_completed' as RuleName, icon: '🏋️', label: 'INOMHUS', sub: '45 min · Bygg pannben', hasInfo: false, isPhoto: false },
-        { key: 'reading_completed' as RuleName, icon: '📖', label: 'LÄSNING', sub: '10 sidor · Ingen fiction', hasInfo: false, isPhoto: false },
-        { key: 'photo_uploaded' as RuleName, icon: '📸', label: 'FOTO', sub: 'Dokumentera sanningen', hasInfo: false, isPhoto: true },
+        { key: 'diet_completed' as RuleName, icon: '🍽️', label: 'DIET', sub: targets.dietDisplay, hasInfo: true, isPhoto: false, isOptional: false },
+        { key: 'workout_outdoor_completed' as RuleName, icon: '🏃', label: 'UTOMHUS', sub: targets.workoutDuration > 0 ? `${targets.workoutDuration} min · Friska luften` : 'Friska luften', hasInfo: false, isPhoto: false, isOptional: false },
+        // Show second workout only if level requires 2 workouts
+        ...(targets.workouts >= 2 ? [
+            { key: 'workout_indoor_completed' as RuleName, icon: '🏋️', label: 'INOMHUS', sub: targets.workoutDuration > 0 ? `${targets.workoutDuration} min · Bygg pannben` : 'Bygg pannben', hasInfo: false, isPhoto: false, isOptional: false }
+        ] : []),
+        { key: 'reading_completed' as RuleName, icon: '📖', label: 'LÄSNING', sub: targets.readingDisplay, hasInfo: false, isPhoto: false, isOptional: false },
+        {
+            key: 'photo_uploaded' as RuleName,
+            icon: '📸',
+            label: targets.photoRequired ? 'FOTO' : 'FOTO (Valfritt)',
+            sub: targets.photoRequired ? 'Dokumentera sanningen' : 'Dagens bild',
+            hasInfo: false,
+            isPhoto: true,
+            isOptional: !targets.photoRequired
+        },
     ];
+
+    // Check if all required workouts are done
+    const requiredWorkoutsComplete = targets.workouts === 1
+        ? log?.workout_outdoor_completed
+        : (log?.workout_outdoor_completed && log?.workout_indoor_completed);
+
+    // Check if bonus already registered today
+    const bonusAlreadyRegistered = log?.bonus_completed === true;
 
     return (
         <div className="space-y-4">
@@ -127,6 +170,23 @@ export default function RulesChecklist({
                 })}
             </div>
 
+            {/* Bonus Workout Button - Shows after required workouts complete */}
+            {requiredWorkoutsComplete && onLogBonusWorkout && (
+                bonusAlreadyRegistered ? (
+                    <div className="w-full px-6 py-4 bg-status-green/10 border-2 border-status-green/50 rounded-xl text-status-green font-inter font-bold text-sm uppercase tracking-wider text-center">
+                        ✅ BONUSPASS REGISTRERAT
+                    </div>
+                ) : (
+                    <button
+                        onClick={handleBonusWorkout}
+                        disabled={loggingBonus}
+                        className="w-full px-6 py-4 bg-accent/10 border-2 border-accent/30 rounded-xl text-accent font-inter font-bold text-sm uppercase tracking-wider hover:bg-accent/20 transition-all disabled:opacity-50"
+                    >
+                        {loggingBonus ? 'REGISTRERAR...' : '💪 REGISTRERA BONUSPASS (+20 XP)'}
+                    </button>
+                )
+            )}
+
             {/* Water Tracker (Visual) */}
             <div className="bg-surface border-2 border-primary/20 rounded-xl p-5 relative overflow-hidden">
                 <div className="flex items-center justify-between mb-3 relative z-10">
@@ -134,7 +194,7 @@ export default function RulesChecklist({
                         <span className="text-2xl">💧</span>
                         <div>
                             <h3 className="font-teko text-xl uppercase tracking-wider text-primary leading-none">VATTEN</h3>
-                            <p className="font-inter text-xs text-primary/50">3.5 Liter per dag</p>
+                            <p className="font-inter text-xs text-primary/50">{targets.waterDisplay} per dag</p>
                         </div>
                     </div>
                     <div className="font-teko text-2xl text-accent">
@@ -146,7 +206,7 @@ export default function RulesChecklist({
                 <div className="h-4 bg-background rounded-full overflow-hidden mb-4 border border-white/5 relative z-10">
                     <div
                         className="h-full bg-blue-500 transition-all duration-500 ease-out"
-                        style={{ width: `${Math.min(((log?.water_intake || 0) / 3.5) * 100, 100)}%` }}
+                        style={{ width: `${Math.min(((log?.water_intake || 0) / targets.waterLiters) * 100, 100)}%` }}
                     />
                 </div>
 

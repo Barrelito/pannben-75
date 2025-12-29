@@ -11,7 +11,7 @@ import Link from 'next/link';
 import MobileContainer from '@/components/layout/MobileContainer';
 import Logo from '@/components/ui/Logo';
 import MorningCheckin from '@/components/dashboard/MorningCheckin';
-
+import RankBadge from '@/components/dashboard/RankBadge';
 import RulesChecklist from '@/components/dashboard/RulesChecklist';
 import BMRCalculator from '@/components/dashboard/BMRCalculator';
 import NightWatch from '@/components/dashboard/NightWatch';
@@ -31,6 +31,7 @@ import { calculateRecoveryStatus } from '@/lib/logic/recovery';
 import { dbToUi } from '@/lib/utils/scales';
 import { getDayNumber } from '@/lib/utils/dates';
 import { createClient } from '@/lib/supabase/client';
+import { getDailyTargets } from '@/lib/gameRules';
 import type { User } from '@supabase/supabase-js';
 import type { Profile } from '@/types/database.types';
 import type { MorningScoresUI } from '@/types/logic.types';
@@ -51,6 +52,7 @@ export default function DashboardClient({ user, profile }: DashboardClientProps)
         updateWaterIntake,
         updatePlanning,
         completeDay,
+        logBonusWorkout,
         resetProgress,
     } = useDailyLog(user.id);
 
@@ -117,13 +119,23 @@ export default function DashboardClient({ user, profile }: DashboardClientProps)
         })
         : null;
 
-    // Check if all 5 rules are complete
+    // Get difficulty-based targets
+    const difficultyLevel = profile?.difficulty_level || 'hard';
+    const targets = getDailyTargets(difficultyLevel);
+
+    // Check if all rules are complete based on difficulty level
+    const workoutsComplete = targets.workouts === 1
+        ? log?.workout_outdoor_completed
+        : (log?.workout_outdoor_completed && log?.workout_indoor_completed);
+
+    // Photo is only required if targets.photoRequired is true
+    const photoRequirementMet = !targets.photoRequired || log?.photo_uploaded;
+
     const allRulesComplete =
         log?.diet_completed &&
-        log?.workout_outdoor_completed &&
-        log?.workout_indoor_completed &&
+        workoutsComplete &&
         log?.reading_completed &&
-        log?.photo_uploaded;
+        photoRequirementMet;
 
     const handleMorningCheckin = async (scores: MorningScoresUI) => {
         await submitMorningCheckin(scores);
@@ -169,6 +181,7 @@ export default function DashboardClient({ user, profile }: DashboardClientProps)
                     userId={user.id}
                     currentDay={currentDay}
                     isPremium={isPremium}
+                    currentDifficulty={profile?.difficulty_level || 'hard'}
                     onReset={resetProgress}
                     onRedeemVip={async (code) => {
                         const result = await redeemVipCode(code);
@@ -354,10 +367,13 @@ export default function DashboardClient({ user, profile }: DashboardClientProps)
 
                 {/* Content Wrapper */}
                 <div className="p-6 space-y-6">
+                    {/* Rank Badge */}
+                    <RankBadge totalXP={profile?.total_xp || 0} />
 
                     {/* Rules Checklist */}
                     <RulesChecklist
                         log={log}
+                        difficultyLevel={profile?.difficulty_level || 'hard'}
                         onToggleRule={toggleRule}
                         onUpdateWater={updateWaterIntake}
                         onShowDietInfo={() => setShowDietModal(true)}
@@ -370,6 +386,12 @@ export default function DashboardClient({ user, profile }: DashboardClientProps)
                         }}
                         isPremium={isPremium}
                         onShowPremiumPaywall={() => setShowPremiumPaywall(true)}
+                        onLogBonusWorkout={async () => {
+                            const newXP = await logBonusWorkout();
+                            // Refresh to update RankBadge with new XP from server
+                            router.refresh();
+                            return newXP;
+                        }}
                     />
 
                     {/* Workout Link */}

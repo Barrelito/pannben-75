@@ -18,6 +18,7 @@ import type {
 import { calculateRecoveryStatus } from '@/lib/logic/recovery';
 import { convertScoresToDb } from '@/lib/utils/scales';
 import { getToday, getYesterday, getDayNumber } from '@/lib/utils/dates';
+import { calculateDailyXP, XP_VALUES, type DifficultyLevel } from '@/lib/gamification';
 
 interface UseDailyLogResult {
     log: DailyLog | null;
@@ -31,6 +32,7 @@ interface UseDailyLogResult {
     updateWaterIntake: (liters: number) => Promise<void>;
     updatePlanning: (planning: PlanningData) => Promise<void>;
     completeDay: () => Promise<void>;
+    logBonusWorkout: () => Promise<number>;
     resetProgress: () => Promise<void>;
     refreshLog: () => Promise<void>;
 }
@@ -317,7 +319,7 @@ export function useDailyLog(userId: string): UseDailyLogResult {
     }, [userId, supabase, fetchLog]);
 
     /**
-     * Mark day as completed
+     * Mark day as completed and award XP
      */
     const completeDay = useCallback(async () => {
         setLoading(true);
@@ -326,6 +328,25 @@ export function useDailyLog(userId: string): UseDailyLogResult {
         try {
             const today = getToday();
 
+            // Get user's difficulty level
+            const { data: profile, error: profileError } = await supabase
+                .from('profiles')
+                .select('difficulty_level, total_xp')
+                .eq('id', userId)
+                .single();
+
+            if (profileError) throw profileError;
+
+            // @ts-ignore - Supabase type issue
+            const difficultyLevel: DifficultyLevel = profile?.difficulty_level || 'hard';
+            // @ts-ignore - Supabase type issue
+            const currentXP = profile?.total_xp || 0;
+
+            // Calculate XP reward (base + level bonus)
+            const xpReward = calculateDailyXP(difficultyLevel, 0);
+            const newTotalXP = currentXP + xpReward;
+
+            // Update daily log as completed
             const { error: upsertError } = await supabase
                 .from('daily_logs')
                 .upsert({
@@ -338,10 +359,92 @@ export function useDailyLog(userId: string): UseDailyLogResult {
 
             if (upsertError) throw upsertError;
 
+            // Update profile with new XP total
+            const { error: xpError } = await supabase
+                .from('profiles')
+                .update({ total_xp: newTotalXP })
+                .eq('id', userId);
+
+            if (xpError) throw xpError;
+
             await fetchLog(today);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to complete day');
             console.error('Error completing day:', err);
+            throw err;
+        } finally {
+            setLoading(false);
+        }
+    }, [userId, supabase, fetchLog]);
+
+    /**
+     * Log bonus workout and award 20 XP (max 1 per day)
+     * Returns the new total XP for instant UI update
+     */
+    const logBonusWorkout = useCallback(async (): Promise<number> => {
+        setLoading(true);
+        setError(null);
+
+        try {
+            const today = getToday();
+
+            // First check if bonus was already registered today
+            const { data: todayLog, error: logError } = await supabase
+                .from('daily_logs')
+                .select('bonus_completed')
+                .eq('user_id', userId)
+                .eq('log_date', today)
+                .single();
+
+            if (logError && logError.code !== 'PGRST116') throw logError;
+
+            // If bonus already registered today, abort
+            if (todayLog?.bonus_completed) {
+                throw new Error('Bonus workout already registered today');
+            }
+
+            // Get current XP
+            const { data: profile, error: profileError } = await supabase
+                .from('profiles')
+                .select('total_xp')
+                .eq('id', userId)
+                .single();
+
+            if (profileError) throw profileError;
+
+            // @ts-ignore - Supabase type issue
+            const currentXP = profile?.total_xp || 0;
+            const newTotalXP = currentXP + XP_VALUES.BONUS_WORKOUT;
+
+            // Update daily log to mark bonus as completed
+            const { error: upsertError } = await supabase
+                .from('daily_logs')
+                .upsert({
+                    user_id: userId,
+                    log_date: today,
+                    bonus_completed: true,
+                } as any, {
+                    onConflict: 'user_id,log_date',
+                });
+
+            if (upsertError) throw upsertError;
+
+            // Update profile with bonus XP
+            const { error: xpError } = await supabase
+                .from('profiles')
+                .update({ total_xp: newTotalXP })
+                .eq('id', userId);
+
+            if (xpError) throw xpError;
+
+            // Refresh log to get updated bonus_completed state
+            await fetchLog(today);
+
+            // Return new XP total for instant UI update
+            return newTotalXP;
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to log bonus workout');
+            console.error('Error logging bonus workout:', err);
             throw err;
         } finally {
             setLoading(false);
@@ -373,6 +476,7 @@ export function useDailyLog(userId: string): UseDailyLogResult {
                     start_date: null,
                     current_day: 0,
                     recovery_status: null,
+                    total_xp: 0, // Reset XP as well
                 } as any)
                 .eq('id', userId);
 
@@ -421,6 +525,7 @@ export function useDailyLog(userId: string): UseDailyLogResult {
         updateWaterIntake,
         updatePlanning,
         completeDay,
+        logBonusWorkout,
         resetProgress,
         refreshLog,
     };

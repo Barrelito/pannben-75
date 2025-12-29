@@ -55,6 +55,8 @@ export interface Profile {
     recovery_status: RecoveryStatus;
     is_premium: boolean;
     selected_diet_id: string | null; // UUID reference to diet_tracks
+    difficulty_level: 'easy' | 'medium' | 'hard'; // Difficulty level (GNISTAN/GLÖDEN/PANNBEN)
+    total_xp: number; // Total accumulated XP for rank progression
     created_at: string; // ISO timestamp
     updated_at: string; // ISO timestamp
 }
@@ -183,6 +185,7 @@ export interface DailyLog {
 
     // Status
     is_completed: boolean;
+    bonus_completed: boolean; // Whether bonus workout was registered today (max 1/day)
 
     created_at: string; // ISO timestamp
     updated_at: string; // ISO timestamp

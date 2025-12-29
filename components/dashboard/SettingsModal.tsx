@@ -5,7 +5,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import confetti from 'canvas-confetti';
 import Modal from '@/components/ui/Modal';
@@ -13,6 +13,7 @@ import RedeemVip from '@/components/premium/RedeemVip';
 import CheckoutButton from '@/components/premium/CheckoutButton';
 import { createClient } from '@/lib/supabase/client';
 import { getToday } from '@/lib/utils/dates';
+import { getLevelDisplayName, getLevelDescription, getLevelEmoji, type DifficultyLevel } from '@/lib/gameRules';
 
 interface SettingsModalProps {
     isOpen: boolean;
@@ -20,6 +21,7 @@ interface SettingsModalProps {
     userId: string;
     currentDay: number;
     isPremium: boolean;
+    currentDifficulty: DifficultyLevel;
     onRedeemVip: (code: string) => Promise<{ success: boolean; error?: string }>;
     onReset: () => Promise<void>;
 }
@@ -30,13 +32,21 @@ export default function SettingsModal({
     userId,
     currentDay,
     isPremium,
+    currentDifficulty,
     onRedeemVip,
     onReset,
 }: SettingsModalProps) {
     const [loading, setLoading] = useState(false);
     const [showResetConfirm, setShowResetConfirm] = useState(false);
+    const [selectedDifficulty, setSelectedDifficulty] = useState<DifficultyLevel>(currentDifficulty);
+    const [savingDifficulty, setSavingDifficulty] = useState(false);
     const router = useRouter();
     const supabase = createClient();
+
+    // Update state when prop changes
+    useEffect(() => {
+        setSelectedDifficulty(currentDifficulty);
+    }, [currentDifficulty]);
 
     const triggerConfetti = () => {
         // ... confetti logic remains same ...
@@ -64,6 +74,32 @@ export default function SettingsModal({
         router.push('/login');
     };
 
+    const handleDifficultyChange = async (level: DifficultyLevel) => {
+        setSavingDifficulty(true);
+        try {
+            const { error } = await supabase
+                .from('profiles')
+                .update({ difficulty_level: level })
+                .eq('id', userId);
+
+            if (error) throw error;
+
+            setSelectedDifficulty(level);
+            router.refresh();
+        } catch (error) {
+            console.error('Error updating difficulty:', error);
+            alert('Kunde inte uppdatera svårighetsgrad. Försök igen.');
+        } finally {
+            setSavingDifficulty(false);
+        }
+    };
+
+    const difficultyLevels: { level: DifficultyLevel; color: string }[] = [
+        { level: 'easy', color: 'blue' },
+        { level: 'medium', color: 'yellow' },
+        { level: 'hard', color: 'red' },
+    ];
+
     return (
         <Modal isOpen={isOpen} onClose={onClose} title="INSTÄLLNINGAR">
             <div className="space-y-6">
@@ -78,6 +114,38 @@ export default function SettingsModal({
                             <span>👤 MIN PROFIL</span>
                             <span className="text-primary/40 group-hover:text-accent">→</span>
                         </button>
+
+                        {/* Difficulty Level Selector */}
+                        <div className="space-y-3 py-4 border-b border-primary/10">
+                            <h3 className="font-inter text-sm uppercase tracking-wider text-primary/60">
+                                Svårighetsgrad
+                            </h3>
+                            <div className="grid grid-cols-3 gap-2">
+                                {difficultyLevels.map(({ level, color }) => (
+                                    <button
+                                        key={level}
+                                        onClick={() => handleDifficultyChange(level)}
+                                        disabled={savingDifficulty}
+                                        className={`
+                                            p-3 rounded-lg border-2 transition-all disabled:opacity-50
+                                            ${selectedDifficulty === level
+                                                ? `border-${color}-500 bg-${color}-500/10`
+                                                : 'border-primary/10 bg-surface hover:border-primary/20'
+                                            }
+                                        `}
+                                    >
+                                        <div className="text-2xl mb-1">{getLevelEmoji(level)}</div>
+                                        <div className={`font-teko text-sm uppercase ${selectedDifficulty === level ? `text-${color}-400` : 'text-primary/60'
+                                            }`}>
+                                            {getLevelDisplayName(level)}
+                                        </div>
+                                    </button>
+                                ))}
+                            </div>
+                            <p className="font-inter text-xs text-primary/50 text-center">
+                                {getLevelDescription(selectedDifficulty)}
+                            </p>
+                        </div>
 
                         {/* Premium Status */}
                         {isPremium && (
