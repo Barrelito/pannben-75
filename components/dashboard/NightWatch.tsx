@@ -14,6 +14,7 @@ interface NightWatchProps {
     isOpen: boolean;
     onClose: () => void;
     onSubmit: (planning: PlanningData) => Promise<void>;
+    onComplete?: () => void;  // Called after successful submit
     initialData?: PlanningData;
     isPremium: boolean;
 }
@@ -22,6 +23,7 @@ export default function NightWatch({
     isOpen,
     onClose,
     onSubmit,
+    onComplete,
     initialData,
     isPremium,
 }: NightWatchProps) {
@@ -40,6 +42,7 @@ export default function NightWatch({
         try {
             await onSubmit(planning);
             onClose();
+            onComplete?.();  // Notify parent that planning is complete
         } catch (error) {
             console.error('Error saving planning:', error);
             alert('Kunde inte spara. Försök igen.');

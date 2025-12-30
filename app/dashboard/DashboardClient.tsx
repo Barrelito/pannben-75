@@ -5,7 +5,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import MobileContainer from '@/components/layout/MobileContainer';
@@ -16,6 +16,7 @@ import RulesChecklist from '@/components/dashboard/RulesChecklist';
 import BMRCalculator from '@/components/dashboard/BMRCalculator';
 import NightWatch from '@/components/dashboard/NightWatch';
 import DayCompleteOverlay from '@/components/dashboard/DayCompleteOverlay';
+import DayCompleteCongrats from '@/components/dashboard/DayCompleteCongrats';
 import SettingsModal from '@/components/dashboard/SettingsModal';
 import DietModal from '@/components/dashboard/DietModal';
 import ToolsSection from '@/components/dashboard/ToolsSection';
@@ -73,7 +74,9 @@ export default function DashboardClient({ user, profile }: DashboardClientProps)
     const [showPremiumPaywall, setShowPremiumPaywall] = useState(false);
     const [weeklyHardWorkouts, setWeeklyHardWorkouts] = useState(0);
     const [showDayComplete, setShowDayComplete] = useState(false);
+    const [showDayCompleteCongrats, setShowDayCompleteCongrats] = useState(false);
     const [dailyQuote, setDailyQuote] = useState(getRandomQuote());
+    const hasShownCongratsRef = useRef(false);  // Prevent re-showing congrats popup
 
     // Check for premium success redirect
     useEffect(() => {
@@ -148,6 +151,14 @@ export default function DashboardClient({ user, profile }: DashboardClientProps)
         log?.reading_completed &&
         photoRequirementMet;
 
+    // Show congrats popup when all rules are completed (but only if day is not already completed)
+    useEffect(() => {
+        if (allRulesComplete && !log?.is_completed && !hasShownCongratsRef.current) {
+            hasShownCongratsRef.current = true;
+            setShowDayCompleteCongrats(true);
+        }
+    }, [allRulesComplete, log?.is_completed]);
+
     const handleMorningCheckin = async (scores: MorningScoresUI) => {
         await submitMorningCheckin(scores);
         router.refresh();
@@ -170,6 +181,12 @@ export default function DashboardClient({ user, profile }: DashboardClientProps)
                     isOpen={showNightWatch}
                     onClose={() => setShowNightWatch(false)}
                     onSubmit={updatePlanning}
+                    onComplete={() => {
+                        // After planning is saved, complete the day and show quote
+                        completeDay();
+                        setDailyQuote(getRandomQuote());
+                        setShowDayComplete(true);
+                    }}
                     isPremium={isPremium}
                     initialData={{
                         plan_workout_1: log?.plan_workout_1,
@@ -190,6 +207,22 @@ export default function DashboardClient({ user, profile }: DashboardClientProps)
                         />
                     )
                 }
+
+                {/* Congrats popup when all rules are complete */}
+                {showDayCompleteCongrats && (
+                    <DayCompleteCongrats
+                        onPlanTomorrow={() => {
+                            setShowDayCompleteCongrats(false);
+                            setShowNightWatch(true);
+                        }}
+                        onSkip={() => {
+                            setShowDayCompleteCongrats(false);
+                            completeDay();
+                            setDailyQuote(getRandomQuote());
+                            setShowDayComplete(true);
+                        }}
+                    />
+                )}
 
                 <SettingsModal
                     isOpen={showSettings}
@@ -465,36 +498,6 @@ export default function DashboardClient({ user, profile }: DashboardClientProps)
                             className="w-full py-8 bg-surface text-primary/60 font-inter font-bold text-xl uppercase tracking-wider border-2 border-primary/20 hover:border-accent hover:text-accent transition-all text-center"
                         >
                             🔒 PLUTONEN
-                        </button>
-                    )}
-
-                    {/* Night Watch Button */}
-                    {/* Night Watch Button (Planning Status) */}
-                    {allRulesComplete && (
-                        <button
-                            onClick={() => setShowNightWatch(true)}
-                            className={`w-full px-8 py-4 font-inter font-semibold text-sm uppercase tracking-wider border-2 transition-all duration-300 ${(log?.plan_workout_1 || log?.plan_diet)
-                                ? 'bg-status-green border-status-green text-black hover:bg-status-green/90'
-                                : 'bg-accent text-background border-accent hover:bg-transparent hover:text-accent'
-                                }`}
-                        >
-                            {(log?.plan_workout_1 || log?.plan_diet) ? '✅ PLANERING KLAR' : '🌙 PLANERA IMORGON'}
-                        </button>
-                    )}
-
-                    {/* Finish Day Button (Lock Day) */}
-                    {allRulesComplete && (log?.plan_workout_1 || log?.plan_diet) && (log.water_intake >= 3.5) && !log.is_completed && (
-                        <button
-                            onClick={() => {
-                                if (confirm('Bra jobbat! En dag till handlingarna. Vill du låsa dagen?')) {
-                                    completeDay();
-                                    setDailyQuote(getRandomQuote());
-                                    setShowDayComplete(true);
-                                }
-                            }}
-                            className="w-full px-8 py-6 bg-gradient-to-r from-accent to-accent/80 text-background font-teko font-bold text-2xl uppercase tracking-widest border-2 border-accent hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 shadow-xl shadow-accent/20 animate-pulse"
-                        >
-                            🔐 LÅS DAGEN & AVSLUTA
                         </button>
                     )}
 
