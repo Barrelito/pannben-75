@@ -2,7 +2,16 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import type { WorkoutSession, WorkoutExercise, WorkoutSet, Exercise } from '@/types/database.types';
+import type {
+    WorkoutSession,
+    WorkoutExercise,
+    WorkoutSet,
+    Exercise,
+    ProgramDay,
+    ProgramExercise,
+    UserProgram,
+    WorkoutProgram
+} from '@/types/database.types';
 import {
     startWorkout,
     completeWorkout,
@@ -31,12 +40,16 @@ interface WorkoutLogClientProps {
     isPremium: boolean;
     activeWorkout: ActiveWorkoutData | null;
     recentWorkouts: WorkoutSession[];
+    programDay?: ProgramDay & { exercises: (ProgramExercise & { exercise: Exercise })[] } | null;
+    userProgram?: UserProgram & { program: WorkoutProgram } | null;
 }
 
 export default function WorkoutLogClient({
     isPremium,
     activeWorkout: initialActiveWorkout,
-    recentWorkouts
+    recentWorkouts,
+    programDay,
+    userProgram
 }: WorkoutLogClientProps) {
     const router = useRouter();
     const [activeWorkout, setActiveWorkout] = useState<ActiveWorkoutData | null>(initialActiveWorkout);
@@ -71,7 +84,18 @@ export default function WorkoutLogClient({
 
     const handleStartWorkout = async () => {
         setIsLoading(true);
-        const { data, error } = await startWorkout();
+
+        let name = undefined;
+        if (programDay && userProgram) {
+            name = `${programDay.name || 'Pass'} (V${programDay.week_number}D${programDay.day_number})`;
+        }
+
+        const { data, error } = await startWorkout(
+            name,
+            userProgram?.program_id,
+            programDay?.id
+        );
+
         if (error) {
             alert(error);
         } else if (data) {
@@ -152,18 +176,22 @@ export default function WorkoutLogClient({
         } else {
             const { data: updated } = await getActiveWorkout();
             setActiveWorkout(updated);
-            // Start rest timer
-            setShowRestTimer(true);
+            // Don't auto-start rest timer on manual add, wait for completion
         }
     };
 
-    const handleUpdateSet = async (setId: string, weight: number | null, reps: number | null) => {
-        const { error } = await updateSet(setId, { weight, reps });
+    const handleUpdateSet = async (setId: string, weight: number | null, reps: number | null, completed?: boolean) => {
+        const { error } = await updateSet(setId, { weight, reps, completed });
         if (error) {
             alert(error);
         } else {
             const { data: updated } = await getActiveWorkout();
             setActiveWorkout(updated);
+
+            // If marked as completed, verify if we should start rest timer
+            if (completed && !showRestTimer) {
+                setShowRestTimer(true);
+            }
         }
     };
 
@@ -223,7 +251,7 @@ export default function WorkoutLogClient({
                         disabled={isLoading}
                         className="w-full px-6 py-4 bg-accent text-background font-inter font-bold text-lg uppercase tracking-wider border-2 border-accent hover:bg-transparent hover:text-accent transition-all disabled:opacity-50"
                     >
-                        {isLoading ? 'STARTAR...' : 'STARTA NYTT PASS'}
+                        {isLoading ? 'STARTAR...' : (programDay ? `STARTA ${userProgram?.program?.name || 'PROGRAM'} - V${programDay.week_number}D${programDay.day_number}` : 'STARTA NYTT PASS')}
                     </button>
                 </div>
 
@@ -316,10 +344,11 @@ export default function WorkoutLogClient({
                         </div>
 
                         {/* Sets Table Header */}
-                        <div className="grid grid-cols-4 gap-2 px-4 py-2 text-center bg-background/50">
+                        <div className="grid grid-cols-5 gap-2 px-4 py-2 text-center bg-background/50">
                             <span className="font-inter text-xs uppercase text-primary/40">SET</span>
                             <span className="font-inter text-xs uppercase text-primary/40">KG</span>
                             <span className="font-inter text-xs uppercase text-primary/40">REPS</span>
+                            <span className="font-inter text-xs uppercase text-primary/40">KLAR</span>
                             <span className="font-inter text-xs uppercase text-primary/40"></span>
                         </div>
 
@@ -331,7 +360,7 @@ export default function WorkoutLogClient({
                                     <SetRow
                                         key={set.id}
                                         set={set}
-                                        onUpdate={(weight, reps) => handleUpdateSet(set.id, weight, reps)}
+                                        onUpdate={(weight, reps, completed) => handleUpdateSet(set.id, weight, reps, completed)}
                                         onDelete={() => handleDeleteSet(set.id)}
                                     />
                                 ))}

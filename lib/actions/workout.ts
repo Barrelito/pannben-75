@@ -132,7 +132,11 @@ export async function deleteExercise(exerciseId: string): Promise<{ error: strin
 /**
  * Start a new workout session
  */
-export async function startWorkout(name?: string): Promise<{ data: WorkoutSession | null; error: string | null }> {
+export async function startWorkout(
+    name?: string,
+    programId?: string,
+    programDayId?: string
+): Promise<{ data: WorkoutSession | null; error: string | null }> {
     const supabase = await createClient();
 
     const { data: { user } } = await supabase.auth.getUser();
@@ -154,38 +158,93 @@ export async function startWorkout(name?: string): Promise<{ data: WorkoutSessio
     // Check for existing active session
     const { data: existingSession } = await supabase
         .from('workout_sessions')
-        .select('id')
+        .select('*, workout_exercises(*)')
         .eq('user_id', user.id)
         .eq('status', 'active')
         .single();
 
-    if (existingSession) {
-        // Return the existing active session
-        const { data: session } = await supabase
+    let session = existingSession;
+
+    // If no session exists, create one
+    if (!session) {
+        const { data: newSession, error } = await supabase
             .from('workout_sessions')
-            .select('*')
-            .eq('id', existingSession.id)
+            .insert({
+                user_id: user.id,
+                name: name || null,
+                program_id: programId || null,
+                program_day_id: programDayId || null,
+                status: 'active',
+            })
+            .select('*, workout_exercises(*)')
             .single();
-        return { data: session, error: null };
+
+        if (error || !newSession) {
+            return { data: null, error: error?.message || 'Kunde inte skapa pass' };
+        }
+        session = newSession;
+    } else {
+        // If session exists, update its program info if provided and missing
+        if (programId || programDayId) {
+            await supabase
+                .from('workout_sessions')
+                .update({
+                    program_id: programId || session.program_id,
+                    program_day_id: programDayId || session.program_day_id,
+                    name: name || session.name // Update name to match program day if generic
+                })
+                .eq('id', session.id);
+        }
     }
 
-    // Create new session
-    const { data, error } = await supabase
-        .from('workout_sessions')
-        .insert({
-            user_id: user.id,
-            name: name || null,
-            status: 'active',
-        })
-        .select()
-        .single();
+    // If starting a program day, and session has no exercises, populate them
+    if (programDayId && (!session.workout_exercises || session.workout_exercises.length === 0)) {
+        // Fetch program exercises
+        const { data: programExercises } = await supabase
+            .from('program_exercises')
+            .select('*')
+            .eq('program_day_id', programDayId)
+            .order('order_index');
 
-    if (error) {
-        return { data: null, error: error.message };
+        if (programExercises && programExercises.length > 0) {
+            for (const pExercise of programExercises) {
+                // Add exercise to workout
+                const { data: wExercise } = await supabase
+                    .from('workout_exercises')
+                    .insert({
+                        session_id: session.id,
+                        exercise_id: pExercise.exercise_id,
+                        order_index: pExercise.order_index,
+                        notes: pExercise.notes,
+                        superset_group: pExercise.superset_group
+                    })
+                    .select()
+                    .single();
+
+                if (wExercise) {
+                    // Add planned sets (uncompleted)
+                    const setsToInsert: WorkoutSetInsert[] = [];
+                    for (let i = 1; i <= pExercise.sets; i++) {
+                        setsToInsert.push({
+                            workout_exercise_id: wExercise.id,
+                            set_number: i,
+                            reps: pExercise.reps_min, // Use min reps as initial target
+                            weight: null, // User fills this
+                            set_type: 'normal',
+                            completed: false
+                        });
+                    }
+
+                    if (setsToInsert.length > 0) {
+                        await supabase.from('workout_sets').insert(setsToInsert);
+                    }
+                }
+            }
+        }
     }
 
     revalidatePath('/workout');
-    return { data, error: null };
+    return { data: session, error: null };
 }
 
 /**
@@ -337,6 +396,7 @@ export async function addSet(
         weight?: number;
         reps?: number;
         setType?: 'normal' | 'warmup' | 'dropset' | 'failure' | 'amrap' | 'rest_pause';
+        completed?: boolean;
     }
 ): Promise<{ data: WorkoutSet | null; error: string | null }> {
     const supabase = await createClient();
@@ -357,7 +417,7 @@ export async function addSet(
         weight: setData.weight ?? null,
         reps: setData.reps ?? null,
         set_type: setData.setType ?? 'normal',
-        completed: true,
+        completed: setData.completed ?? true,
     };
 
     const { data, error } = await supabase
