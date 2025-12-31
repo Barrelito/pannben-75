@@ -477,14 +477,14 @@ export default function DashboardClient({ user, profile }: DashboardClientProps)
                             href="/workout"
                             className="block w-full px-8 py-4 bg-surface text-primary font-inter font-semibold text-sm uppercase tracking-wider border-2 border-primary/20 hover:border-accent hover:text-accent transition-all text-center"
                         >
-                            💪 STARTA TRÄNING
+                            💪 THE COACH
                         </Link>
                     ) : (
                         <button
                             onClick={() => setShowPremiumPaywall(true)}
                             className="w-full px-8 py-4 bg-surface text-primary/60 font-inter font-semibold text-sm uppercase tracking-wider border-2 border-primary/20 hover:border-accent hover:text-accent transition-all text-center"
                         >
-                            🔒 STARTA TRÄNING
+                            🔒 THE COACH
                         </button>
                     )}
 

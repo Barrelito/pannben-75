@@ -529,7 +529,7 @@ export async function completeWorkout(sessionId: string): Promise<{ error: strin
     // Get session start time for duration calculation
     const { data: session } = await supabase
         .from('workout_sessions')
-        .select('started_at')
+        .select('started_at, program_id')
         .eq('id', sessionId)
         .single();
 
@@ -578,6 +578,21 @@ export async function completeWorkout(sessionId: string): Promise<{ error: strin
                 log_date: today,
                 workout_indoor_completed: true,
             });
+    }
+
+    // Update program progress if part of a program
+    if (session?.program_id) {
+        const { data: userProgram } = await supabase
+            .from('user_programs')
+            .select('id')
+            .eq('user_id', user.id)
+            .eq('program_id', session.program_id)
+            .eq('status', 'active')
+            .single();
+
+        if (userProgram) {
+            await updateProgramProgress(userProgram.id);
+        }
     }
 
     revalidatePath('/workout');
