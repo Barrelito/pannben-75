@@ -9,6 +9,7 @@ import Link from 'next/link';
 import MobileContainer from '@/components/layout/MobileContainer';
 import ServerHeader from '@/components/layout/ServerHeader';
 import RunningProgressCard from '@/components/workout-log/RunningProgressCard';
+import QuickLogWorkoutButton from '@/components/workout/QuickLogWorkoutButton';
 
 // Helper to get day name
 const DAY_NAMES = ['Mån', 'Tis', 'Ons', 'Tors', 'Fre', 'Lör', 'Sön'];
@@ -211,23 +212,12 @@ export default async function WorkoutHomePage() {
 
                 {/* Quick Actions */}
                 <section className="space-y-3">
-                    {/* Running Coach with Progress */}
+                    {/* Running Coach with Progress - HIDDEN TEMPORARILY
                     <RunningProgressCard />
+                    */}
 
                     {/* Log Custom Workout */}
-                    <Link
-                        href="/workout/log"
-                        className="flex items-center gap-4 p-4 bg-surface border border-primary/20 hover:border-accent transition-colors"
-                    >
-                        <span className="text-3xl">✏️</span>
-                        <div className="flex-1">
-                            <h3 className="font-teko text-lg text-primary">LOGGA EGET PASS</h3>
-                            <p className="font-inter text-xs text-primary/60">
-                                Välj övningar fritt
-                            </p>
-                        </div>
-                        <span className="text-primary/40">→</span>
-                    </Link>
+                    <QuickLogWorkoutButton />
                 </section>
 
                 {/* Admin Link - Only for admins */}

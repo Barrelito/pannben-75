@@ -601,6 +601,71 @@ export async function completeWorkout(sessionId: string): Promise<{ error: strin
 }
 
 /**
+ * Log a quick workout (Outdoor/Indoor)
+ */
+export async function logQuickWorkout(
+    name: string,
+    type: 'indoor' | 'outdoor'
+): Promise<{ error: string | null }> {
+    const supabase = await createClient();
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+        return { error: 'Ej inloggad' };
+    }
+
+    // 1. Create a completed workout session
+    const { error: sessionError } = await supabase
+        .from('workout_sessions')
+        .insert({
+            user_id: user.id,
+            name: name,
+            status: 'completed',
+            started_at: new Date().toISOString(),
+            completed_at: new Date().toISOString(),
+            duration_seconds: 0, // Unknown duration for quick logs
+            total_volume: 0,
+            total_sets: 0,
+            total_reps: 0,
+        });
+
+    if (sessionError) {
+        return { error: sessionError.message };
+    }
+
+    // 2. Update daily log
+    const today = new Date().toISOString().split('T')[0];
+    const updateField = type === 'indoor' ? 'workout_indoor_completed' : 'workout_outdoor_completed';
+
+    // Try to update existing log or insert new one
+    const { data: existingLog } = await supabase
+        .from('daily_logs')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('log_date', today)
+        .single();
+
+    if (existingLog) {
+        await supabase
+            .from('daily_logs')
+            .update({ [updateField]: true })
+            .eq('id', existingLog.id);
+    } else {
+        await supabase
+            .from('daily_logs')
+            .insert({
+                user_id: user.id,
+                log_date: today,
+                [updateField]: true,
+            });
+    }
+
+    revalidatePath('/workout');
+    revalidatePath('/dashboard');
+    return { error: null };
+}
+
+/**
  * Cancel/discard a workout session
  */
 export async function cancelWorkout(sessionId: string): Promise<{ error: string | null }> {
@@ -616,6 +681,7 @@ export async function cancelWorkout(sessionId: string): Promise<{ error: string 
     }
 
     revalidatePath('/workout');
+    revalidatePath('/dashboard'); // Also refresh dashboard as active session state might change
     return { error: null };
 }
 
