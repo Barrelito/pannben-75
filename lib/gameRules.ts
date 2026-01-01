@@ -85,8 +85,8 @@ export function getDailyTargets(level: DifficultyLevel): DailyTargets {
                 workoutLabel: 'TRÄNINGSPASS',
                 workoutSublabel: '2 × 45 min · 1 utomhus',
                 weeklyHardWorkouts: 0, // All workouts are hard
-                waterLiters: 4,
-                waterDisplay: '4 liter',
+                waterLiters: 3.5,
+                waterDisplay: '3.5 liter',
                 readingPages: 10,
                 readingDisplay: '10 sidor · Ingen fiction',
                 dietRules: [

@@ -16,8 +16,8 @@ export default function BottomNav() {
         return pathname.startsWith(path);
     };
 
-    // Hide on landing page
-    if (pathname === '/') {
+    // Hide on landing page and onboarding
+    if (pathname === '/' || pathname.startsWith('/onboarding') || pathname.startsWith('/login') || pathname.startsWith('/join')) {
         return null;
     }
 
