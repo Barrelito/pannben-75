@@ -106,6 +106,21 @@ export default function WorkoutLogClient({
         setIsLoading(false);
     };
 
+    const handleStartCustomWorkout = async () => {
+        setIsLoading(true);
+
+        // Start empty workout (no program context)
+        const { data, error } = await startWorkout(undefined, undefined, undefined);
+
+        if (error) {
+            alert(error);
+        } else if (data) {
+            const { data: fullWorkout } = await getActiveWorkout();
+            setActiveWorkout(fullWorkout);
+        }
+        setIsLoading(false);
+    };
+
     const handleCompleteWorkout = async () => {
         if (!activeWorkout) return;
 
@@ -246,13 +261,25 @@ export default function WorkoutLogClient({
                     <p className="font-inter text-sm text-primary/80 mb-6">
                         Börja ett nytt träningspass och logga dina övningar och set.
                     </p>
-                    <button
-                        onClick={handleStartWorkout}
-                        disabled={isLoading}
-                        className="w-full px-6 py-4 bg-accent text-background font-inter font-bold text-lg uppercase tracking-wider border-2 border-accent hover:bg-transparent hover:text-accent transition-all disabled:opacity-50"
-                    >
-                        {isLoading ? 'STARTAR...' : (programDay ? `STARTA ${userProgram?.program?.name || 'PROGRAM'} - V${programDay.week_number}D${programDay.day_number}` : 'STARTA NYTT PASS')}
-                    </button>
+                    <div className="space-y-3">
+                        <button
+                            onClick={handleStartWorkout}
+                            disabled={isLoading}
+                            className="w-full px-6 py-4 bg-accent text-background font-inter font-bold text-lg uppercase tracking-wider border-2 border-accent hover:bg-transparent hover:text-accent transition-all disabled:opacity-50"
+                        >
+                            {isLoading ? 'STARTAR...' : (programDay ? `STARTA ${userProgram?.program?.name || 'PROGRAM'} - V${programDay.week_number}D${programDay.day_number}` : 'STARTA NYTT PASS')}
+                        </button>
+
+                        {(programDay) && (
+                            <button
+                                onClick={handleStartCustomWorkout}
+                                disabled={isLoading}
+                                className="w-full px-6 py-4 bg-transparent text-primary/60 font-inter font-semibold text-xs uppercase tracking-wider border border-primary/20 hover:border-accent hover:text-accent transition-all disabled:opacity-50"
+                            >
+                                LOGGA EGET STYRKEPASS (UTANFÖR PROGRAM)
+                            </button>
+                        )}
+                    </div>
                 </div>
 
                 {/* Recent Workouts */}

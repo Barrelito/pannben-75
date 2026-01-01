@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Teko, Inter } from "next/font/google";
 import "./globals.css";
+import BottomNav from "@/components/layout/BottomNav";
 
 const teko = Teko({
   variable: "--font-teko",
@@ -40,7 +41,10 @@ export default function RootLayout({
       <body
         className={`${teko.variable} ${inter.variable} antialiased`}
       >
-        {children}
+        <div className="pb-24">
+          {children}
+        </div>
+        <BottomNav />
       </body>
     </html>
   );
