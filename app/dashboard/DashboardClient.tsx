@@ -93,17 +93,12 @@ export default function DashboardClient({ user, profile }: DashboardClientProps)
     // Determine if morning check-in is needed
     useEffect(() => {
         if (!loading && gracePeriod) {
-            const today = new Date().toISOString().split('T')[0];
-            const checkinDoneKey = `morning_checkin_done_${today}`;
-            const checkinDoneInLocalStorage = localStorage.getItem(checkinDoneKey) === 'true';
-
             // Check-in needed if:
             // 1. Log exists but has no sleep score (partial log)
             // 2. No log exists at all for today (fresh start)
-            // 3. AND localStorage doesn't say we already did the checkin
             const hasLog = log !== null;
             const hasSleepScore = log?.sleep_score !== null && log?.sleep_score !== undefined;
-            const needsCheckin = (!hasLog || !hasSleepScore) && gracePeriod.canLogToday && !checkinDoneInLocalStorage;
+            const needsCheckin = (!hasLog || !hasSleepScore) && gracePeriod.canLogToday;
             setShowMorningCheckin(needsCheckin);
         }
     }, [log, loading, gracePeriod]);
@@ -166,14 +161,6 @@ export default function DashboardClient({ user, profile }: DashboardClientProps)
     }, [allRulesComplete, log?.is_completed]);
 
     const handleMorningCheckin = async (scores: MorningScoresUI) => {
-        // Mark as done in localStorage for today (backup in case DB is slow)
-        const today = new Date().toISOString().split('T')[0];
-        localStorage.setItem(`morning_checkin_done_${today}`, 'true');
-
-        // Clear yesterday's localStorage entry to keep it clean
-        const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
-        localStorage.removeItem(`morning_checkin_done_${yesterday}`);
-
         await submitMorningCheckin(scores);
         setShowMorningCheckin(false);  // Immediately hide modal
         router.refresh();
