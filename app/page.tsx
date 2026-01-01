@@ -36,7 +36,7 @@ export default function Home() {
           {/* Actions */}
           <div className="flex flex-col w-full gap-4">
             <Link
-              href="/login"
+              href="/login?view=signup"
               className="w-full py-4 bg-yellow-600 text-black font-teko text-xl font-bold uppercase tracking-widest hover:bg-yellow-500 transition-all duration-300"
             >
               Börja Utmaningen

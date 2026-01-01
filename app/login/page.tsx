@@ -11,9 +11,11 @@ function LoginForm() {
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [mode, setMode] = useState<'login' | 'signup'>('login');
-    const router = useRouter();
     const searchParams = useSearchParams();
+    // Default to 'login', but check if 'view' param is 'signup'
+    const initialMode = searchParams.get('view') === 'signup' ? 'signup' : 'login';
+    const [mode, setMode] = useState<'login' | 'signup'>(initialMode);
+    const router = useRouter();
     const supabase = createClient();
 
     // Get return URL from query params
