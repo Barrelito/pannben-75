@@ -16,6 +16,11 @@ export default function BottomNav() {
         return pathname.startsWith(path);
     };
 
+    // Hide on landing page
+    if (pathname === '/') {
+        return null;
+    }
+
     return (
         <>
             {/* Navigation Bar */}
