@@ -211,15 +211,12 @@ export default async function StatisticsPage() {
                     </section>
                 )}
 
-                {/* Coming Soon: Calendar View */}
-                <section className="opacity-50">
+                {/* Calendar View */}
+                <section className="mb-8">
                     <h2 className="font-teko text-2xl uppercase tracking-wider text-primary mb-4">
-                        Kalender (Kommer snart)
+                        Kalender
                     </h2>
-                    <div className="bg-surface border border-primary/20 p-6 text-center">
-                        <span className="text-4xl mb-2 block">📅</span>
-                        <p className="font-inter text-sm text-primary/60">Månadsöverblick på väg...</p>
-                    </div>
+                    <CalendarGrid logs={dailyLogs} />
                 </section>
             </div>
         </MobileContainer>
@@ -254,6 +251,123 @@ function TrendBar({ value, color }: { value: number; color: string }) {
                 className={`w-full ${color} rounded-sm transition-all`}
                 style={{ height: `${height}px` }}
             />
+        </div>
+    );
+}
+
+function CalendarGrid({ logs }: { logs: DailyLog[] }) {
+    // Build a map of log_date -> is_completed
+    const logMap = new Map<string, boolean>();
+    logs.forEach(log => {
+        logMap.set(log.log_date, log.is_completed);
+    });
+
+    // Get current month info
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = today.getMonth(); // 0-indexed
+
+    // First day of month and days in month
+    const firstDay = new Date(year, month, 1);
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const startDayOfWeek = firstDay.getDay(); // 0 = Sunday, 1 = Monday, etc.
+
+    // Adjust for Monday start (Swedish standard)
+    const adjustedStart = startDayOfWeek === 0 ? 6 : startDayOfWeek - 1;
+
+    // Month name (Swedish)
+    const monthNames = ['Januari', 'Februari', 'Mars', 'April', 'Maj', 'Juni',
+        'Juli', 'Augusti', 'September', 'Oktober', 'November', 'December'];
+
+    // Generate calendar days
+    const days: (number | null)[] = [];
+
+    // Empty slots before first day
+    for (let i = 0; i < adjustedStart; i++) {
+        days.push(null);
+    }
+
+    // Actual days
+    for (let d = 1; d <= daysInMonth; d++) {
+        days.push(d);
+    }
+
+    const getDayStatus = (day: number) => {
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const todayStr = today.toISOString().split('T')[0];
+
+        if (dateStr > todayStr) return 'future';
+        if (!logMap.has(dateStr)) return 'empty';
+        return logMap.get(dateStr) ? 'completed' : 'incomplete';
+    };
+
+    return (
+        <div className="bg-surface border border-primary/20 p-4">
+            {/* Month Header */}
+            <div className="text-center mb-4">
+                <span className="font-teko text-xl uppercase tracking-wider text-primary">
+                    {monthNames[month]} {year}
+                </span>
+            </div>
+
+            {/* Weekday Headers */}
+            <div className="grid grid-cols-7 gap-1 mb-2">
+                {['M', 'T', 'O', 'T', 'F', 'L', 'S'].map((d, i) => (
+                    <div key={i} className="text-center font-inter text-[10px] text-primary/40 uppercase">
+                        {d}
+                    </div>
+                ))}
+            </div>
+
+            {/* Calendar Grid */}
+            <div className="grid grid-cols-7 gap-1">
+                {days.map((day, i) => {
+                    if (day === null) {
+                        return <div key={i} className="aspect-square" />;
+                    }
+
+                    const status = getDayStatus(day);
+                    const isToday = day === today.getDate();
+
+                    let bgColor = 'bg-primary/5'; // empty/future
+                    let textColor = 'text-primary/30';
+                    let border = '';
+
+                    if (status === 'completed') {
+                        bgColor = 'bg-status-green/20';
+                        textColor = 'text-status-green';
+                    } else if (status === 'incomplete') {
+                        bgColor = 'bg-status-red/20';
+                        textColor = 'text-status-red';
+                    }
+
+                    if (isToday) {
+                        border = 'ring-2 ring-accent';
+                    }
+
+                    return (
+                        <div
+                            key={i}
+                            className={`aspect-square flex items-center justify-center rounded-sm ${bgColor} ${textColor} ${border}`}
+                        >
+                            <span className="font-inter text-xs">{day}</span>
+                        </div>
+                    );
+                })}
+            </div>
+
+            {/* Legend */}
+            <div className="flex justify-center gap-4 mt-4 text-[10px] text-primary/40">
+                <span className="flex items-center gap-1">
+                    <span className="w-3 h-3 bg-status-green/20 rounded-sm"></span>Avklarat
+                </span>
+                <span className="flex items-center gap-1">
+                    <span className="w-3 h-3 bg-status-red/20 rounded-sm"></span>Missat
+                </span>
+                <span className="flex items-center gap-1">
+                    <span className="w-3 h-3 bg-primary/5 rounded-sm"></span>Ej loggat
+                </span>
+            </div>
         </div>
     );
 }
