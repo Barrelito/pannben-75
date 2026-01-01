@@ -36,11 +36,15 @@ export default function BottomNav() {
                         <span className="text-[10px] uppercase tracking-wider font-inter">Hem</span>
                     </Link>
 
-                    {/* Stats - Placeholder */}
-                    <div className="flex flex-col items-center justify-center space-y-1 text-primary/20 cursor-not-allowed">
+                    {/* Stats */}
+                    <Link
+                        href="/statistics"
+                        className={`flex flex-col items-center justify-center space-y-1 transition-colors ${isActive('/statistics') ? 'text-accent' : 'text-primary/40 hover:text-primary'
+                            }`}
+                    >
                         <BarChart2 size={24} strokeWidth={1.5} />
                         <span className="text-[10px] uppercase tracking-wider font-inter">Statistik</span>
-                    </div>
+                    </Link>
 
                     {/* Plus Button (Center) */}
                     <div className="relative -top-5">
