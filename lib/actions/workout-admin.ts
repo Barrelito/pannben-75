@@ -465,3 +465,108 @@ export async function copyProgramWeek(
     revalidatePath('/admin/workout');
     return { error: null };
 }
+
+/**
+ * Copy a specific day to another day (admin only)
+ * Overwrites target day content with source day content
+ */
+export async function copyProgramDay(
+    programId: string,
+    sourceDayId: string,
+    targetWeek: number,
+    targetDayNumber: number
+): Promise<{ error: string | null }> {
+    if (!await isAdmin()) {
+        return { error: 'Ej behörig' };
+    }
+
+    const supabase = await createClient();
+
+    // 1. Fetch Source Day and Exercises
+    const { data: sourceDay, error: fetchError } = await supabase
+        .from('program_days')
+        .select(`
+            *,
+            exercises:program_exercises(*)
+        `)
+        .eq('id', sourceDayId)
+        .single();
+
+    if (fetchError || !sourceDay) {
+        return { error: 'Kunde inte hitta käll-dag' };
+    }
+
+    // 2. Handler Target Day (Find or Create)
+    let targetDayId: string | null = null;
+
+    const { data: existingTargetDay } = await supabase
+        .from('program_days')
+        .select('id')
+        .eq('program_id', programId)
+        .eq('week_number', targetWeek)
+        .eq('day_number', targetDayNumber)
+        .single();
+
+    if (existingTargetDay) {
+        targetDayId = existingTargetDay.id;
+
+        // Update name/desc to match source
+        await supabase
+            .from('program_days')
+            .update({
+                name: sourceDay.name,
+                description: sourceDay.description
+            })
+            .eq('id', targetDayId);
+
+        // Delete existing exercises
+        await supabase
+            .from('program_exercises')
+            .delete()
+            .eq('program_day_id', targetDayId);
+
+    } else {
+        // Create new day
+        const { data: newDay, error: createError } = await supabase
+            .from('program_days')
+            .insert({
+                program_id: programId,
+                week_number: targetWeek,
+                day_number: targetDayNumber,
+                name: sourceDay.name,
+                description: sourceDay.description,
+            })
+            .select('id')
+            .single();
+
+        if (createError || !newDay) {
+            return { error: 'Kunde inte skapa måldag' };
+        }
+        targetDayId = newDay.id;
+    }
+
+    // 3. Copy Exercises
+    const exercises = (sourceDay as any).exercises || [];
+    for (const ex of exercises) {
+        const { error: exError } = await supabase
+            .from('program_exercises')
+            .insert({
+                program_day_id: targetDayId,
+                exercise_id: ex.exercise_id,
+                order_index: ex.order_index,
+                sets: ex.sets,
+                reps_min: ex.reps_min,
+                reps_max: ex.reps_max,
+                rest_seconds: ex.rest_seconds,
+                notes: ex.notes,
+                superset_group: ex.superset_group,
+            });
+
+        if (exError) {
+            return { error: 'Fel vid kopiering av övning: ' + exError.message };
+        }
+    }
+
+    revalidatePath('/admin/workout');
+    return { error: null };
+}

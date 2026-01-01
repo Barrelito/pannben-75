@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import type { ProgramDay, ProgramExercise, Exercise, WorkoutProgram, MuscleGroup } from '@/types/database.types';
-import { addProgramDay, deleteProgramDay, addProgramExercise, deleteProgramExercise, copyProgramWeek, createSystemExercise } from '@/lib/actions/workout-admin';
+import { addProgramDay, deleteProgramDay, addProgramExercise, deleteProgramExercise, copyProgramWeek, createSystemExercise, copyProgramDay } from '@/lib/actions/workout-admin';
 
 const MUSCLE_GROUPS: { value: MuscleGroup; label: string }[] = [
     { value: 'bröst', label: 'Bröst' },
@@ -29,6 +29,7 @@ export default function ProgramEditor({ program, programDays, allExercises }: Pr
     const [isLoading, setIsLoading] = useState(false);
     const [showExerciseForm, setShowExerciseForm] = useState<string | null>(null);
     const [showCopyModal, setShowCopyModal] = useState(false);
+    const [copyDaySource, setCopyDaySource] = useState<string | null>(null);
     const [showCreateExercise, setShowCreateExercise] = useState(false);
 
     // Exercise Form State
@@ -161,6 +162,27 @@ export default function ProgramEditor({ program, programDays, allExercises }: Pr
         location.reload();
     };
 
+    const handleCopyDay = async (sourceDayId: string, targetDayNumber: number) => {
+        // Confirmation is implicit in the action of selecting a target, 
+        // but let's be safe if target exists.
+        const targetDay = weekDays.find(d => d.day_number === targetDayNumber);
+        if (targetDay) {
+            if (!confirm(`Dag ${targetDayNumber} finns redan. Vill du ersätta den med innehållet från den valda dagen?`)) return;
+        }
+
+        setIsLoading(true);
+        // We assume copy within the same active week for now, as per user request example "Dag 1 -> Dag 4"
+        const { error } = await copyProgramDay(program.id, sourceDayId, activeWeek, targetDayNumber);
+
+        if (error) {
+            alert(error);
+        } else {
+            setCopyDaySource(null);
+            location.reload();
+        }
+        setIsLoading(false);
+    };
+
     const handleCreateExercise = async () => {
         if (!newExerciseName.trim()) {
             alert('Namn krävs');
@@ -276,18 +298,46 @@ export default function ProgramEditor({ program, programDays, allExercises }: Pr
                             {day ? (
                                 <>
                                     {/* Day Header */}
-                                    <div className="flex justify-between items-center mb-4 border-b border-primary/10 pb-2">
-                                        <h3 className="font-teko text-xl text-primary">
-                                            <span className="text-accent">DAG {dayNum}</span>
-                                            {day.name && ` — ${day.name}`}
-                                        </h3>
+                                    <div className="flex bg-surface items-center">
                                         <button
                                             onClick={() => handleDeleteDay(day.id)}
                                             className="text-primary/60 hover:text-red-500 text-sm"
                                         >
                                             🗑️
                                         </button>
+                                        <button
+                                            onClick={() => setCopyDaySource(day.id)}
+                                            className="text-primary/60 hover:text-accent text-sm ml-2"
+                                            title="Kopiera dag"
+                                        >
+                                            📋
+                                        </button>
                                     </div>
+
+                                    {/* Copy Day Modal (Inline) */}
+                                    {copyDaySource === day.id && (
+                                        <div className="mb-4 bg-background border border-accent p-3">
+                                            <div className="flex justify-between items-center mb-2">
+                                                <p className="text-xs text-primary font-bold uppercase">KOPIERA TILL:</p>
+                                                <button onClick={() => setCopyDaySource(null)} className="text-xs text-primary/40 hover:text-primary">✕</button>
+                                            </div>
+                                            <div className="grid grid-cols-4 gap-2">
+                                                {Array.from({ length: daysPerWeek }, (_, i) => i + 1).map(targetDayNum => (
+                                                    <button
+                                                        key={targetDayNum}
+                                                        onClick={() => handleCopyDay(day.id, targetDayNum)}
+                                                        disabled={targetDayNum === dayNum || isLoading}
+                                                        className={`px-2 py-1 text-xs border transition-colors ${targetDayNum === dayNum
+                                                            ? 'border-transparent text-primary/20 cursor-not-allowed'
+                                                            : 'border-primary/20 hover:border-accent hover:text-accent'
+                                                            }`}
+                                                    >
+                                                        DAG {targetDayNum}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
 
                                     {/* Exercises */}
                                     <div className="space-y-2 mb-4">
@@ -467,6 +517,6 @@ export default function ProgramEditor({ program, programDays, allExercises }: Pr
                     );
                 })}
             </div>
-        </div>
+        </div >
     );
 }
