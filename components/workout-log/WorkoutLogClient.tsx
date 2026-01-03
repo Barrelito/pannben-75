@@ -19,6 +19,7 @@ import {
     addExerciseToWorkout,
     removeExerciseFromWorkout,
     addSet,
+    addWarmupSet,
     updateSet,
     deleteSet,
     getActiveWorkout,
@@ -203,6 +204,16 @@ export default function WorkoutLogClient({
             const { data: updated } = await getActiveWorkout();
             setActiveWorkout(updated);
             // Don't auto-start rest timer on manual add, wait for completion
+        }
+    };
+
+    const handleAddWarmupSet = async (workoutExerciseId: string) => {
+        const { error } = await addWarmupSet(workoutExerciseId);
+        if (error) {
+            alert(error);
+        } else {
+            const { data: updated } = await getActiveWorkout();
+            setActiveWorkout(updated);
         }
     };
 
@@ -433,6 +444,15 @@ export default function WorkoutLogClient({
                             <span className="font-inter text-xs uppercase text-primary/40"></span>
                         </div>
 
+                        {/* Add Warmup Button */}
+                        <button
+                            onClick={() => handleAddWarmupSet(workoutExercise.id)}
+                            className="w-full px-4 py-2 text-orange-400 font-inter text-xs uppercase tracking-wider hover:bg-orange-500/10 transition-colors border-b border-primary/10 flex items-center justify-center gap-1"
+                        >
+                            <span className="text-sm">🔥</span>
+                            + Uppvärmning
+                        </button>
+
                         {/* Sets */}
                         <div className="divide-y divide-primary/10">
                             {workoutExercise.sets
@@ -457,10 +477,42 @@ export default function WorkoutLogClient({
                                     lastSet?.reps ?? undefined
                                 );
                             }}
-                            className="w-full px-4 py-3 text-accent font-inter text-sm uppercase tracking-wider hover:bg-accent/10 transition-colors"
+                            className="w-full px-4 py-3 text-accent font-inter text-sm uppercase tracking-wider hover:bg-accent/10 transition-colors border-b border-primary/10"
                         >
                             + Lägg till set
                         </button>
+
+                        {/* Per-Exercise Summary */}
+                        {workoutExercise.sets.length > 0 && (() => {
+                            const completedSets = workoutExercise.sets.filter(s => s.set_type !== 'warmup');
+                            const volume = completedSets.reduce((sum, s) => sum + ((s.weight || 0) * (s.reps || 0)), 0);
+                            const totalReps = completedSets.reduce((sum, s) => sum + (s.reps || 0), 0);
+                            const weightsWithReps = completedSets.filter(s => s.weight && s.reps);
+                            const avgWeight = weightsWithReps.length > 0
+                                ? weightsWithReps.reduce((sum, s) => sum + (s.weight || 0), 0) / weightsWithReps.length
+                                : 0;
+
+                            return (
+                                <div className="grid grid-cols-3 gap-4 px-4 py-3 bg-background/30 text-center">
+                                    <div>
+                                        <p className="font-inter text-[10px] uppercase text-primary/40">Volym</p>
+                                        <p className="font-teko text-lg text-primary">
+                                            {volume >= 1000 ? `${(volume / 1000).toFixed(1)}t` : `${volume} kg`}
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <p className="font-inter text-[10px] uppercase text-primary/40">Reps</p>
+                                        <p className="font-teko text-lg text-primary">{totalReps}</p>
+                                    </div>
+                                    <div>
+                                        <p className="font-inter text-[10px] uppercase text-primary/40">Medelvikt</p>
+                                        <p className="font-teko text-lg text-primary">
+                                            {avgWeight > 0 ? `${avgWeight.toFixed(1)} kg` : '—'}
+                                        </p>
+                                    </div>
+                                </div>
+                            );
+                        })()}
                     </div>
                 ))}
 

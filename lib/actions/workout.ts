@@ -435,6 +435,64 @@ export async function addSet(
 }
 
 /**
+ * Add a warmup set at the beginning of an exercise
+ * Inserts with set_number 1 and renumbers all existing sets
+ */
+export async function addWarmupSet(
+    workoutExerciseId: string,
+    setData?: {
+        weight?: number;
+        reps?: number;
+    }
+): Promise<{ data: WorkoutSet | null; error: string | null }> {
+    const supabase = await createClient();
+
+    // Get all existing sets for this exercise
+    const { data: existingSets, error: fetchError } = await supabase
+        .from('workout_sets')
+        .select('id, set_number')
+        .eq('workout_exercise_id', workoutExerciseId)
+        .order('set_number', { ascending: true });
+
+    if (fetchError) {
+        return { data: null, error: fetchError.message };
+    }
+
+    // Increment set_number for all existing sets
+    if (existingSets && existingSets.length > 0) {
+        for (const set of existingSets) {
+            await supabase
+                .from('workout_sets')
+                .update({ set_number: set.set_number + 1 })
+                .eq('id', set.id);
+        }
+    }
+
+    // Insert new warmup set at position 1
+    const insertData: WorkoutSetInsert = {
+        workout_exercise_id: workoutExerciseId,
+        set_number: 1,
+        weight: setData?.weight ?? 0,  // Default to 0 kg for warmup
+        reps: setData?.reps ?? null,
+        set_type: 'warmup',
+        completed: false,
+    };
+
+    const { data, error } = await supabase
+        .from('workout_sets')
+        .insert(insertData)
+        .select()
+        .single();
+
+    if (error) {
+        return { data: null, error: error.message };
+    }
+
+    revalidatePath('/workout/log');
+    return { data, error: null };
+}
+
+/**
  * Update a set
  */
 export async function updateSet(
