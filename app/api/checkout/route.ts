@@ -39,7 +39,7 @@ export async function POST(request: Request) {
                     quantity: 1,
                 },
             ],
-            mode: 'payment',
+            mode: 'subscription',
             success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/dashboard?premium=success`,
             cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/dashboard?premium=cancelled`,
             client_reference_id: userId,
