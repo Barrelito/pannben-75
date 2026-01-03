@@ -506,7 +506,25 @@ export async function updateSet(
 ): Promise<{ error: string | null }> {
     const supabase = await createClient();
 
-    const { error } = await supabase
+    // First, get the current set info to find the exercise
+    const { data: currentSet } = await supabase
+        .from('workout_sets')
+        .select(`
+            id,
+            weight,
+            reps,
+            workout_exercise_id,
+            workout_exercises!inner (
+                exercise_id,
+                workout_sessions!inner (
+                    user_id
+                )
+            )
+        `)
+        .eq('id', setId)
+        .single();
+
+    const { error: updateError } = await supabase
         .from('workout_sets')
         .update({
             weight: updates.weight,
@@ -516,8 +534,50 @@ export async function updateSet(
         })
         .eq('id', setId);
 
-    if (error) {
-        return { error: error.message };
+    if (updateError) {
+        return { error: updateError.message };
+    }
+
+    // Check for Personal Record if we have weight and reps
+    const newWeight = updates.weight ?? currentSet?.weight;
+    const newReps = updates.reps ?? currentSet?.reps;
+
+    if (currentSet && newWeight && newReps && newWeight > 0 && newReps > 0) {
+        const exerciseId = (currentSet.workout_exercises as any)?.exercise_id;
+        const userId = (currentSet.workout_exercises as any)?.workout_sessions?.user_id;
+
+        if (exerciseId && userId) {
+            // Find historical best weight for this exercise at same or higher reps
+            const { data: historicalBest } = await supabase
+                .from('workout_sets')
+                .select(`
+                    weight,
+                    reps,
+                    workout_exercises!inner (
+                        exercise_id,
+                        workout_sessions!inner (
+                            user_id,
+                            completed_at
+                        )
+                    )
+                `)
+                .eq('workout_exercises.exercise_id', exerciseId)
+                .eq('workout_exercises.workout_sessions.user_id', userId)
+                .not('workout_exercises.workout_sessions.completed_at', 'is', null)
+                .neq('id', setId)  // Exclude current set
+                .gte('reps', newReps)  // Same or more reps
+                .order('weight', { ascending: false })
+                .limit(1);
+
+            const bestHistoricalWeight = historicalBest?.[0]?.weight || 0;
+            const isPR = newWeight > bestHistoricalWeight;
+
+            // Update the PR flag
+            await supabase
+                .from('workout_sets')
+                .update({ is_pr: isPR })
+                .eq('id', setId);
+        }
     }
 
     revalidatePath('/workout/log');
