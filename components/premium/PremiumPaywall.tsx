@@ -65,9 +65,9 @@ export default function PremiumPaywall({
 
                 {/* Pricing */}
                 <div className="text-center">
-                    <p className="font-teko text-3xl text-accent">175 KR</p>
+                    <p className="font-teko text-3xl text-accent">175 KR<span className="text-lg text-primary/60">/år</span></p>
                     <p className="font-inter text-xs text-primary/60 uppercase tracking-wider">
-                        Engångsbetalning • Livstid
+                        Kan avbrytas närsomhelst
                     </p>
                 </div>
 

@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase/server';
 import Link from 'next/link';
 import MobileContainer from '@/components/layout/MobileContainer';
 import ServerHeader from '@/components/layout/ServerHeader';
+import CancelSubscription from '@/components/premium/CancelSubscription';
 
 export default async function WorkoutSettingsPage() {
     const supabase = await createClient();
@@ -20,14 +21,15 @@ export default async function WorkoutSettingsPage() {
         redirect('/login');
     }
 
-    // Check admin status
+    // Check admin status and premium
     const { data: profile } = await supabase
         .from('profiles')
-        .select('is_admin')
+        .select('is_admin, is_premium')
         .eq('id', user.id)
         .single();
 
     const isAdmin = profile?.is_admin || false;
+    const isPremium = profile?.is_premium || false;
 
     // Count user's custom exercises
     const { count: exerciseCount } = await supabase
@@ -119,6 +121,12 @@ export default async function WorkoutSettingsPage() {
                             <span className="text-primary/40">→</span>
                         </div>
                     </Link>
+                </div>
+
+                {/* Account / Subscription */}
+                <div className="mt-8 pt-4 border-t border-primary/10">
+                    <h2 className="font-teko text-lg text-primary/60 uppercase mb-3">Konto</h2>
+                    <CancelSubscription isPremium={isPremium} />
                 </div>
 
                 {/* Admin Section */}
