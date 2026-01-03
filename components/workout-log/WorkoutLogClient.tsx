@@ -59,6 +59,11 @@ export default function WorkoutLogClient({
     const [showTimerSettings, setShowTimerSettings] = useState(false);
     const [elapsedTime, setElapsedTime] = useState(0);
 
+    // Workout pause state
+    const [isWorkoutPaused, setIsWorkoutPaused] = useState(false);
+    const [workoutPausedAt, setWorkoutPausedAt] = useState<number | null>(null);
+    const [totalPausedTime, setTotalPausedTime] = useState(0);
+
     // Rest timer state - using absolute timestamps  
     const [restTimerDuration, setRestTimerDuration] = useState(90); // Default 1:30
     const [restTimerStartedAt, setRestTimerStartedAt] = useState<number | null>(null);
@@ -353,14 +358,32 @@ export default function WorkoutLogClient({
 
                     {/* Right: Pause + Complete buttons */}
                     <div className="flex items-center gap-1">
-                        {/* Pause button (placeholder - workout pause functionality) */}
+                        {/* Pause/Resume workout button */}
                         <button
-                            className="p-2 text-primary/60 hover:text-primary"
-                            aria-label="Pausa pass"
+                            onClick={() => {
+                                if (isWorkoutPaused) {
+                                    // Resume: add paused duration to total
+                                    const pausedDuration = Date.now() - (workoutPausedAt || Date.now());
+                                    setTotalPausedTime(prev => prev + pausedDuration);
+                                    setWorkoutPausedAt(null);
+                                } else {
+                                    // Pause: record pause time
+                                    setWorkoutPausedAt(Date.now());
+                                }
+                                setIsWorkoutPaused(!isWorkoutPaused);
+                            }}
+                            className={`p-2 ${isWorkoutPaused ? 'text-accent' : 'text-primary/60 hover:text-primary'}`}
+                            aria-label={isWorkoutPaused ? 'Återuppta pass' : 'Pausa pass'}
                         >
-                            <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
-                            </svg>
+                            {isWorkoutPaused ? (
+                                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M8 5v14l11-7z" />
+                                </svg>
+                            ) : (
+                                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
+                                </svg>
+                            )}
                         </button>
 
                         {/* Complete button */}
@@ -382,7 +405,7 @@ export default function WorkoutLogClient({
             <div className="h-14" />
 
             {/* Exercises List - scrollable content */}
-            <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4" style={{ paddingBottom: restTimerStartedAt ? '120px' : '80px' }}>
+            <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4" style={{ paddingBottom: '120px' }}>
                 {activeWorkout.exercises.map((workoutExercise) => (
                     <div
                         key={workoutExercise.id}
@@ -488,38 +511,36 @@ export default function WorkoutLogClient({
                 />
             )}
 
-            {/* Rest Timer Bar - fixed at bottom */}
-            {restTimerStartedAt && (
-                <RestTimerBar
-                    duration={restTimerDuration}
-                    startedAt={restTimerStartedAt}
-                    isPaused={isRestTimerPaused}
-                    pausedAt={restTimerPausedAt}
-                    onReset={() => {
-                        setRestTimerStartedAt(Date.now());
-                        setIsRestTimerPaused(false);
+            {/* Rest Timer Bar - always visible at bottom */}
+            <RestTimerBar
+                duration={restTimerDuration}
+                startedAt={restTimerStartedAt}
+                isPaused={isRestTimerPaused}
+                pausedAt={restTimerPausedAt}
+                onReset={() => {
+                    setRestTimerStartedAt(Date.now());
+                    setIsRestTimerPaused(false);
+                    setRestTimerPausedAt(null);
+                }}
+                onTogglePause={() => {
+                    if (isRestTimerPaused) {
+                        // Resume: adjust startedAt to account for pause duration
+                        const pauseDuration = Date.now() - (restTimerPausedAt || Date.now());
+                        setRestTimerStartedAt((restTimerStartedAt || Date.now()) + pauseDuration);
                         setRestTimerPausedAt(null);
-                    }}
-                    onTogglePause={() => {
-                        if (isRestTimerPaused) {
-                            // Resume: adjust startedAt to account for pause duration
-                            const pauseDuration = Date.now() - (restTimerPausedAt || Date.now());
-                            setRestTimerStartedAt((restTimerStartedAt || Date.now()) + pauseDuration);
-                            setRestTimerPausedAt(null);
-                        } else {
-                            // Pause: record pause time
-                            setRestTimerPausedAt(Date.now());
-                        }
-                        setIsRestTimerPaused(!isRestTimerPaused);
-                    }}
-                    onTimerClick={() => setShowTimerSettings(true)}
-                    onComplete={() => {
-                        setRestTimerStartedAt(null);
-                        setIsRestTimerPaused(false);
-                        setRestTimerPausedAt(null);
-                    }}
-                />
-            )}
+                    } else {
+                        // Pause: record pause time
+                        setRestTimerPausedAt(Date.now());
+                    }
+                    setIsRestTimerPaused(!isRestTimerPaused);
+                }}
+                onTimerClick={() => setShowTimerSettings(true)}
+                onComplete={() => {
+                    setRestTimerStartedAt(null);
+                    setIsRestTimerPaused(false);
+                    setRestTimerPausedAt(null);
+                }}
+            />
 
             {/* Timer Settings Dialog */}
             {showTimerSettings && (
