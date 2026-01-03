@@ -92,6 +92,38 @@ export async function POST(request: NextRequest) {
         }
     }
 
+    // Handle subscription deleted/cancelled event
+    if (event.type === 'customer.subscription.deleted') {
+        const subscription = event.data.object as Stripe.Subscription;
+        const customerId = subscription.customer as string;
+
+        try {
+            const supabase = createSupabaseAdmin();
+
+            // Find user by stripe_customer_id and remove premium
+            const { error } = await supabase
+                .from('profiles')
+                .update({ is_premium: false })
+                .eq('stripe_customer_id', customerId);
+
+            if (error) {
+                console.error('Database update failed:', error);
+                return NextResponse.json(
+                    { error: 'Database update failed' },
+                    { status: 500 }
+                );
+            }
+
+            console.log(`❌ Customer ${customerId} premium removed (subscription ended)`);
+        } catch (err: any) {
+            console.error('Error removing premium:', err);
+            return NextResponse.json(
+                { error: 'Failed to update user' },
+                { status: 500 }
+            );
+        }
+    }
+
     // Return success for all events (Stripe expects 200)
     return NextResponse.json({ received: true });
 }
