@@ -23,6 +23,8 @@ import ToolsSection from '@/components/dashboard/ToolsSection';
 import PhotoUpload from '@/components/dashboard/PhotoUpload';
 import PhotoGallery from '@/components/dashboard/PhotoGallery';
 import PremiumPaywall from '@/components/premium/PremiumPaywall';
+import MissedDayDialog from '@/components/dashboard/MissedDayDialog';
+import StreakBrokenDialog from '@/components/dashboard/StreakBrokenDialog';
 import { useDailyLog } from '@/hooks/useDailyLog';
 import { usePremium } from '@/hooks/usePremium';
 import { useDiet } from '@/hooks/useDiet';
@@ -77,6 +79,9 @@ export default function DashboardClient({ user, profile }: DashboardClientProps)
     const [showDayCompleteCongrats, setShowDayCompleteCongrats] = useState(false);
     const [dailyQuote, setDailyQuote] = useState(getRandomQuote());
     const hasShownCongratsRef = useRef(false);  // Prevent re-showing congrats popup
+    const [showMissedDayDialog, setShowMissedDayDialog] = useState(false);
+    const [showStreakBrokenDialog, setShowStreakBrokenDialog] = useState(false);
+    const hasShownStreakDialogRef = useRef(false);  // Prevent re-showing streak dialogs
 
     // Check for premium success redirect
     useEffect(() => {
@@ -93,6 +98,12 @@ export default function DashboardClient({ user, profile }: DashboardClientProps)
     // Determine if morning check-in is needed
     useEffect(() => {
         if (!loading && gracePeriod) {
+            // Don't show morning check-in if streak is broken or we need to handle yesterday first
+            if (gracePeriod.streakBroken || gracePeriod.mustLogYesterday) {
+                setShowMorningCheckin(false);
+                return;
+            }
+
             // Check-in needed if:
             // 1. Log exists but has no sleep score (partial log)
             // 2. No log exists at all for today (fresh start)
@@ -102,6 +113,19 @@ export default function DashboardClient({ user, profile }: DashboardClientProps)
             setShowMorningCheckin(needsCheckin);
         }
     }, [log, loading, gracePeriod]);
+
+    // Show streak dialogs when needed
+    useEffect(() => {
+        if (!loading && gracePeriod && !hasShownStreakDialogRef.current) {
+            if (gracePeriod.streakBroken) {
+                hasShownStreakDialogRef.current = true;
+                setShowStreakBrokenDialog(true);
+            } else if (gracePeriod.mustLogYesterday) {
+                hasShownStreakDialogRef.current = true;
+                setShowMissedDayDialog(true);
+            }
+        }
+    }, [gracePeriod, loading]);
 
     // Check if day is completed on load
     useEffect(() => {
@@ -166,13 +190,47 @@ export default function DashboardClient({ user, profile }: DashboardClientProps)
         router.refresh();
     };
 
+    // Handle missed day dialog - user chose "Ja" (forgot to log yesterday)
+    const handleMissedDayYes = () => {
+        setShowMissedDayDialog(false);
+        // Allow the user to continue - they can now backlog yesterday
+        // The gracePeriod.mustLogYesterday state is used elsewhere to determine behavior
+    };
+
+    // Handle missed day dialog - user chose "Nej" (didn't forget, just missed)
+    const handleMissedDayNo = async () => {
+        setShowMissedDayDialog(false);
+        await resetProgress();
+        router.refresh();
+    };
+
+    // Handle streak broken - must reset
+    const handleStreakBrokenReset = async () => {
+        setShowStreakBrokenDialog(false);
+        await resetProgress();
+        router.refresh();
+    };
+
     // Calculate Rank
     const rank = calculateRank(profile?.total_xp || 0);
 
     return (
         <MobileContainer>
             <main className="min-h-screen bg-background pb-20">
-                {/* Modals */}
+                {/* Streak Validation Dialogs - highest priority */}
+                <StreakBrokenDialog
+                    isOpen={showStreakBrokenDialog}
+                    daysMissed={gracePeriod?.daysMissed || 0}
+                    onReset={handleStreakBrokenReset}
+                />
+
+                <MissedDayDialog
+                    isOpen={showMissedDayDialog}
+                    onYes={handleMissedDayYes}
+                    onNo={handleMissedDayNo}
+                />
+
+                {/* Other Modals */}
                 <MorningCheckin
                     isOpen={showMorningCheckin}
                     onClose={() => setShowMorningCheckin(false)}

@@ -46,4 +46,8 @@ export interface GracePeriodResult {
     mustLogYesterday: boolean;
     currentDay: number;
     message?: string;
+    // Streak validation fields
+    streakBroken: boolean;        // True if >1 day missed
+    daysMissed: number;           // How many days since last log
+    lastLogDate?: string;         // Date of last log (YYYY-MM-DD)
 }

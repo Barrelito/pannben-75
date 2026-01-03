@@ -78,6 +78,7 @@ export function useDailyLog(userId: string): UseDailyLogResult {
 
     /**
      * Check grace period - determines if user can log today or must complete yesterday
+     * Also detects if streak is broken (more than 1 day missed)
      */
     const checkGracePeriod = useCallback(async (): Promise<GracePeriodResult> => {
         try {
@@ -98,6 +99,8 @@ export function useDailyLog(userId: string): UseDailyLogResult {
                     mustLogYesterday: false,
                     currentDay: 0,
                     message: 'No challenge started yet',
+                    streakBroken: false,
+                    daysMissed: 0,
                 };
                 setGracePeriod(result);
                 return result;
@@ -114,32 +117,66 @@ export function useDailyLog(userId: string): UseDailyLogResult {
                     canLogToday: true,
                     mustLogYesterday: false,
                     currentDay: 1,
+                    streakBroken: false,
+                    daysMissed: 0,
                 };
                 setGracePeriod(result);
                 return result;
             }
 
-            // Check if yesterday's log exists
-            const { data: yesterdayLog, error: logError } = await supabase
+            // Get the MOST RECENT log entry for this user
+            const { data: recentLog, error: logError } = await supabase
                 .from('daily_logs')
-                .select('id')
+                .select('log_date')
                 .eq('user_id', userId)
-                .eq('log_date', yesterday)
+                .order('log_date', { ascending: false })
+                .limit(1)
                 .single();
 
             if (logError && logError.code !== 'PGRST116') {
                 throw logError;
             }
 
-            const yesterdayComplete = !!yesterdayLog;
+            // Calculate days since last log
+            let daysMissed = 0;
+            let lastLogDate: string | undefined;
+
+            if (recentLog) {
+                lastLogDate = recentLog.log_date;
+                const lastLog = new Date(recentLog.log_date);
+                const todayDate = new Date(today);
+                const diffTime = todayDate.getTime() - lastLog.getTime();
+                daysMissed = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+            } else {
+                // No logs at all - count from start_date
+                // @ts-ignore - Supabase type issue with select subset
+                const startDate = new Date(profile.start_date);
+                const todayDate = new Date(today);
+                const diffTime = todayDate.getTime() - startDate.getTime();
+                daysMissed = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+            }
+
+            // Determine streak status:
+            // 0 days missed = logged today or it's day 1
+            // 1 day missed = yesterday not logged, can still backlog
+            // >1 days missed = streak broken, must reset
+
+            const streakBroken = daysMissed > 1;
+            const mustLogYesterday = daysMissed === 1;
+            const canLogToday = daysMissed === 0;
 
             const result: GracePeriodResult = {
-                canLogToday: yesterdayComplete,
-                mustLogYesterday: !yesterdayComplete,
+                canLogToday,
+                mustLogYesterday,
                 currentDay,
-                message: yesterdayComplete
-                    ? undefined
-                    : 'Du måste fylla i gårdagens logg först',
+                streakBroken,
+                daysMissed,
+                lastLogDate,
+                message: streakBroken
+                    ? `Du har missat ${daysMissed} dagar. Utmaningen måste startas om.`
+                    : mustLogYesterday
+                        ? 'Glömde du logga gårdagen?'
+                        : undefined,
             };
 
             setGracePeriod(result);
@@ -151,6 +188,8 @@ export function useDailyLog(userId: string): UseDailyLogResult {
                 mustLogYesterday: false,
                 currentDay: 0,
                 message: 'Error checking streak',
+                streakBroken: false,
+                daysMissed: 0,
             };
             setGracePeriod(fallback);
             return fallback;
