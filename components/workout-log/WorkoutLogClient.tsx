@@ -25,7 +25,8 @@ import {
 } from '@/lib/actions/workout';
 import ExerciseSearch from './ExerciseSearch';
 import SetRow from './SetRow';
-import RestTimer from './RestTimer';
+import RestTimerBar from './RestTimerBar';
+import TimerSettingsDialog from './TimerSettingsDialog';
 
 type WorkoutExerciseWithDetails = WorkoutExercise & {
     exercise: Exercise;
@@ -55,9 +56,14 @@ export default function WorkoutLogClient({
     const [activeWorkout, setActiveWorkout] = useState<ActiveWorkoutData | null>(initialActiveWorkout);
     const [isLoading, setIsLoading] = useState(false);
     const [showExerciseSearch, setShowExerciseSearch] = useState(false);
-    const [showRestTimer, setShowRestTimer] = useState(false);
-    const [restSeconds, setRestSeconds] = useState(90);
+    const [showTimerSettings, setShowTimerSettings] = useState(false);
     const [elapsedTime, setElapsedTime] = useState(0);
+
+    // Rest timer state - using absolute timestamps  
+    const [restTimerDuration, setRestTimerDuration] = useState(90); // Default 1:30
+    const [restTimerStartedAt, setRestTimerStartedAt] = useState<number | null>(null);
+    const [isRestTimerPaused, setIsRestTimerPaused] = useState(false);
+    const [restTimerPausedAt, setRestTimerPausedAt] = useState<number | null>(null);
 
     // Calculate elapsed time
     useEffect(() => {
@@ -203,9 +209,11 @@ export default function WorkoutLogClient({
             const { data: updated } = await getActiveWorkout();
             setActiveWorkout(updated);
 
-            // If marked as completed, verify if we should start rest timer
-            if (completed && !showRestTimer) {
-                setShowRestTimer(true);
+            // If marked as completed, start rest timer with absolute timestamp
+            if (completed && !restTimerStartedAt) {
+                setRestTimerStartedAt(Date.now());
+                setIsRestTimerPaused(false);
+                setRestTimerPausedAt(null);
             }
         }
     };
@@ -318,40 +326,63 @@ export default function WorkoutLogClient({
 
     // Active workout view
     return (
-        <div className="flex flex-col h-[calc(100vh-80px)]">
-            {/* Workout Header */}
-            <div className="bg-surface border-b-2 border-primary/20 px-4 py-3 flex items-center justify-between">
-                <div className="flex items-center gap-3">
+        <div className="flex flex-col min-h-screen pb-20">
+            {/* Fixed Workout Header */}
+            <div className="fixed top-0 left-0 right-0 z-30 bg-surface border-b-2 border-primary/20">
+                <div className="flex items-center justify-between px-3 py-2 max-w-screen-md mx-auto">
+                    {/* Left: Cancel button */}
                     <button
                         onClick={handleCancelWorkout}
-                        className="text-red-500 hover:text-red-400 p-2"
+                        className="text-red-500 hover:text-red-400 p-2 -ml-2"
                         aria-label="Avbryt pass"
                     >
-                        ✕
+                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
                     </button>
-                    <div>
-                        <p className="font-teko text-lg uppercase tracking-wider text-primary">
+
+                    {/* Center: Title + Timer */}
+                    <div className="flex-1 flex items-center justify-center gap-3 min-w-0">
+                        <p className="font-teko text-base uppercase tracking-wider text-primary truncate max-w-[140px]">
                             {activeWorkout.name || 'Pågående pass'}
                         </p>
-                        <p className="font-inter text-xs text-accent">
+                        <span className="font-teko text-xl text-accent tabular-nums">
                             {formatTime(elapsedTime)}
-                        </p>
+                        </span>
+                    </div>
+
+                    {/* Right: Pause + Complete buttons */}
+                    <div className="flex items-center gap-1">
+                        {/* Pause button (placeholder - workout pause functionality) */}
+                        <button
+                            className="p-2 text-primary/60 hover:text-primary"
+                            aria-label="Pausa pass"
+                        >
+                            <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
+                            </svg>
+                        </button>
+
+                        {/* Complete button */}
+                        <button
+                            onClick={handleCompleteWorkout}
+                            disabled={isLoading}
+                            className="p-2 text-green-500 hover:text-green-400"
+                            aria-label="Avsluta pass"
+                        >
+                            <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                        </button>
                     </div>
                 </div>
-                <button
-                    onClick={handleCompleteWorkout}
-                    disabled={isLoading}
-                    className="p-2 text-green-500 hover:text-green-400"
-                    aria-label="Avsluta pass"
-                >
-                    <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                </button>
             </div>
 
-            {/* Exercises List */}
-            <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+            {/* Spacer for fixed header */}
+            <div className="h-14" />
+
+            {/* Exercises List - scrollable content */}
+            <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4" style={{ paddingBottom: restTimerStartedAt ? '120px' : '80px' }}>
                 {activeWorkout.exercises.map((workoutExercise) => (
                     <div
                         key={workoutExercise.id}
@@ -457,12 +488,54 @@ export default function WorkoutLogClient({
                 />
             )}
 
-            {/* Rest Timer */}
-            {showRestTimer && (
-                <RestTimer
-                    seconds={restSeconds}
-                    onComplete={() => setShowRestTimer(false)}
-                    onClose={() => setShowRestTimer(false)}
+            {/* Rest Timer Bar - fixed at bottom */}
+            {restTimerStartedAt && (
+                <RestTimerBar
+                    duration={restTimerDuration}
+                    startedAt={restTimerStartedAt}
+                    isPaused={isRestTimerPaused}
+                    pausedAt={restTimerPausedAt}
+                    onReset={() => {
+                        setRestTimerStartedAt(Date.now());
+                        setIsRestTimerPaused(false);
+                        setRestTimerPausedAt(null);
+                    }}
+                    onTogglePause={() => {
+                        if (isRestTimerPaused) {
+                            // Resume: adjust startedAt to account for pause duration
+                            const pauseDuration = Date.now() - (restTimerPausedAt || Date.now());
+                            setRestTimerStartedAt((restTimerStartedAt || Date.now()) + pauseDuration);
+                            setRestTimerPausedAt(null);
+                        } else {
+                            // Pause: record pause time
+                            setRestTimerPausedAt(Date.now());
+                        }
+                        setIsRestTimerPaused(!isRestTimerPaused);
+                    }}
+                    onTimerClick={() => setShowTimerSettings(true)}
+                    onComplete={() => {
+                        setRestTimerStartedAt(null);
+                        setIsRestTimerPaused(false);
+                        setRestTimerPausedAt(null);
+                    }}
+                />
+            )}
+
+            {/* Timer Settings Dialog */}
+            {showTimerSettings && (
+                <TimerSettingsDialog
+                    currentDuration={restTimerDuration}
+                    onSave={(duration) => {
+                        setRestTimerDuration(duration);
+                        // If timer is running, restart with new duration
+                        if (restTimerStartedAt) {
+                            setRestTimerStartedAt(Date.now());
+                            setIsRestTimerPaused(false);
+                            setRestTimerPausedAt(null);
+                        }
+                        setShowTimerSettings(false);
+                    }}
+                    onClose={() => setShowTimerSettings(false)}
                 />
             )}
         </div>
