@@ -517,8 +517,22 @@ export default function WorkoutLogClient({
                                 ? weightsWithReps.reduce((sum, s) => sum + (s.weight || 0), 0) / weightsWithReps.length
                                 : 0;
 
+                            // Calculate estimated 1RM using Epley formula: 1RM = weight × (1 + reps/30)
+                            // Find the set with highest estimated 1RM
+                            let estimated1RM = 0;
+                            weightsWithReps.forEach(s => {
+                                const weight = s.weight || 0;
+                                const reps = s.reps || 0;
+                                if (reps === 1) {
+                                    estimated1RM = Math.max(estimated1RM, weight);
+                                } else {
+                                    const e1rm = weight * (1 + reps / 30);
+                                    estimated1RM = Math.max(estimated1RM, e1rm);
+                                }
+                            });
+
                             return (
-                                <div className="grid grid-cols-3 gap-4 px-4 py-3 bg-background/30 text-center">
+                                <div className="grid grid-cols-4 gap-2 px-4 py-3 bg-background/30 text-center">
                                     <div>
                                         <p className="font-inter text-[10px] uppercase text-primary/40">Volym</p>
                                         <p className="font-teko text-lg text-primary">
@@ -530,9 +544,15 @@ export default function WorkoutLogClient({
                                         <p className="font-teko text-lg text-primary">{totalReps}</p>
                                     </div>
                                     <div>
-                                        <p className="font-inter text-[10px] uppercase text-primary/40">Medelvikt</p>
+                                        <p className="font-inter text-[10px] uppercase text-primary/40">Snitt</p>
                                         <p className="font-teko text-lg text-primary">
-                                            {avgWeight > 0 ? `${avgWeight.toFixed(1)} kg` : '—'}
+                                            {avgWeight > 0 ? `${avgWeight.toFixed(0)} kg` : '—'}
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <p className="font-inter text-[10px] uppercase text-accent/60">1RM</p>
+                                        <p className="font-teko text-lg text-accent">
+                                            {estimated1RM > 0 ? `${Math.round(estimated1RM)} kg` : '—'}
                                         </p>
                                     </div>
                                 </div>
