@@ -28,6 +28,7 @@ import ExerciseSearch from './ExerciseSearch';
 import SetRow from './SetRow';
 import RestTimerBar from './RestTimerBar';
 import TimerSettingsDialog from './TimerSettingsDialog';
+import ExerciseHistoryModal from './ExerciseHistoryModal';
 
 type WorkoutExerciseWithDetails = WorkoutExercise & {
     exercise: Exercise;
@@ -59,6 +60,7 @@ export default function WorkoutLogClient({
     const [showExerciseSearch, setShowExerciseSearch] = useState(false);
     const [showTimerSettings, setShowTimerSettings] = useState(false);
     const [elapsedTime, setElapsedTime] = useState(0);
+    const [selectedExerciseForHistory, setSelectedExerciseForHistory] = useState<{ id: string; name: string } | null>(null);
 
     // Workout pause state
     const [isWorkoutPaused, setIsWorkoutPaused] = useState(false);
@@ -424,9 +426,20 @@ export default function WorkoutLogClient({
                     >
                         {/* Exercise Header */}
                         <div className="flex items-center justify-between px-4 py-3 border-b border-primary/10">
-                            <h3 className="font-teko text-xl uppercase tracking-wider text-primary">
-                                {workoutExercise.exercise.name}
-                            </h3>
+                            <button
+                                onClick={() => setSelectedExerciseForHistory({
+                                    id: workoutExercise.exercise.id,
+                                    name: workoutExercise.exercise.name,
+                                })}
+                                className="flex items-center gap-2 hover:text-accent transition-colors group"
+                            >
+                                <h3 className="font-teko text-xl uppercase tracking-wider text-primary group-hover:text-accent">
+                                    {workoutExercise.exercise.name}
+                                </h3>
+                                <svg className="w-4 h-4 text-primary/30 group-hover:text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                            </button>
                             <button
                                 onClick={() => handleRemoveExercise(workoutExercise.id)}
                                 className="text-primary/40 hover:text-red-500 p-1"
@@ -562,6 +575,14 @@ export default function WorkoutLogClient({
                     onClose={() => setShowExerciseSearch(false)}
                 />
             )}
+
+            {/* Exercise History Modal */}
+            <ExerciseHistoryModal
+                isOpen={!!selectedExerciseForHistory}
+                onClose={() => setSelectedExerciseForHistory(null)}
+                exerciseId={selectedExerciseForHistory?.id || ''}
+                exerciseName={selectedExerciseForHistory?.name || ''}
+            />
 
             {/* Rest Timer Bar - always visible at bottom */}
             <RestTimerBar

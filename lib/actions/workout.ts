@@ -797,6 +797,68 @@ export async function getLastWorkoutForExercise(exerciseId: string): Promise<{
     return { data: sets, error: null };
 }
 
+/**
+ * Get exercise history - last 3 workouts with this exercise
+ */
+export async function getExerciseHistory(exerciseId: string): Promise<{
+    data: {
+        date: string;
+        sets: { weight: number | null; reps: number | null; set_type: string }[];
+    }[] | null;
+    error: string | null;
+}> {
+    const supabase = await createClient();
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+        return { data: null, error: 'Ej inloggad' };
+    }
+
+    // Find the 3 most recent completed workouts that included this exercise
+    const { data: recentWorkouts, error } = await supabase
+        .from('workout_sessions')
+        .select(`
+            id,
+            completed_at,
+            workout_exercises!inner(
+                id,
+                exercise_id,
+                sets:workout_sets(weight, reps, set_type, set_number)
+            )
+        `)
+        .eq('user_id', user.id)
+        .eq('status', 'completed')
+        .eq('workout_exercises.exercise_id', exerciseId)
+        .order('completed_at', { ascending: false })
+        .limit(3);
+
+    if (error) {
+        return { data: null, error: error.message };
+    }
+
+    if (!recentWorkouts || recentWorkouts.length === 0) {
+        return { data: null, error: null };
+    }
+
+    // Transform data for the modal
+    const history = recentWorkouts.map(workout => {
+        const workoutExercises = workout.workout_exercises as {
+            sets: { weight: number | null; reps: number | null; set_type: string; set_number: number }[];
+        }[];
+
+        const sets = workoutExercises[0]?.sets
+            ?.sort((a, b) => a.set_number - b.set_number)
+            .map(s => ({ weight: s.weight, reps: s.reps, set_type: s.set_type })) || [];
+
+        return {
+            date: workout.completed_at || '',
+            sets,
+        };
+    });
+
+    return { data: history, error: null };
+}
+
 // ============================================
 // PROGRAM ACTIONS
 // ============================================
