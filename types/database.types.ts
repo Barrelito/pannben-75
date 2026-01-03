@@ -718,6 +718,7 @@ export interface ProgramExercise {
     rest_seconds: number;
     notes: string | null;
     superset_group: string | null;
+    set_types: SetType[] | null;  // Per-set type configuration
     created_at: string;
     // Joined data (optional)
     exercise?: Exercise;
@@ -734,6 +735,7 @@ export interface ProgramExerciseInsert {
     rest_seconds?: number;
     notes?: string | null;
     superset_group?: string | null;
+    set_types?: SetType[] | null;
 }
 
 export interface ProgramExerciseUpdate {
@@ -744,6 +746,7 @@ export interface ProgramExerciseUpdate {
     rest_seconds?: number;
     notes?: string | null;
     superset_group?: string | null;
+    set_types?: SetType[] | null;
 }
 
 // ============================================

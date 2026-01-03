@@ -1,15 +1,26 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import type { WorkoutSet } from '@/types/database.types';
+import type { WorkoutSet, SetType } from '@/types/database.types';
+
+const SET_TYPE_OPTIONS: { value: SetType; label: string; emoji: string }[] = [
+    { value: 'normal', label: 'Normal', emoji: '' },
+    { value: 'warmup', label: 'Uppvärmning', emoji: '🔥' },
+    { value: 'dropset', label: 'Dropset', emoji: '↓' },
+    { value: 'failure', label: 'Till Failure', emoji: '⚡' },
+    { value: 'amrap', label: 'AMRAP', emoji: '∞' },
+    { value: 'rest_pause', label: 'Rest-Pause', emoji: '⏸' },
+];
 
 interface SetRowProps {
     set: WorkoutSet;
     onUpdate: (weight: number | null, reps: number | null, completed: boolean) => void;
     onDelete: () => void;
+    onSetTypeChange?: (setType: SetType) => void;
+    isFromProgram?: boolean;  // If true, set type is locked (defined by program)
 }
 
-export default function SetRow({ set, onUpdate, onDelete }: SetRowProps) {
+export default function SetRow({ set, onUpdate, onDelete, onSetTypeChange, isFromProgram }: SetRowProps) {
     const [weight, setWeight] = useState<string>(set.weight?.toString() || '');
     const [reps, setReps] = useState<string>(set.reps?.toString() || '');
     const [isCompleted, setIsCompleted] = useState(set.completed);
@@ -150,7 +161,29 @@ export default function SetRow({ set, onUpdate, onDelete }: SetRowProps) {
                             className="fixed inset-0 z-40"
                             onClick={() => setShowMenu(false)}
                         />
-                        <div className="absolute right-4 top-full z-50 bg-surface border border-primary/20 shadow-lg min-w-[150px]">
+                        <div className="absolute right-4 top-full z-50 bg-surface border border-primary/20 shadow-lg min-w-[180px]">
+                            {/* Set Type Selection (only for free workouts) */}
+                            {!isFromProgram && onSetTypeChange && (
+                                <div className="border-b border-primary/10">
+                                    <p className="px-4 py-2 text-[10px] text-primary/40 uppercase font-semibold">Set-typ</p>
+                                    {SET_TYPE_OPTIONS.map(option => (
+                                        <button
+                                            key={option.value}
+                                            onClick={() => {
+                                                onSetTypeChange(option.value);
+                                                setShowMenu(false);
+                                            }}
+                                            className={`block w-full px-4 py-2 text-left font-inter text-sm hover:bg-accent/10 transition-colors ${set.set_type === option.value ? 'text-accent bg-accent/5' : 'text-primary'
+                                                }`}
+                                        >
+                                            {option.emoji && <span className="mr-2">{option.emoji}</span>}
+                                            {option.label}
+                                            {set.set_type === option.value && <span className="ml-2">✓</span>}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+
                             <button
                                 onClick={() => {
                                     onDelete();

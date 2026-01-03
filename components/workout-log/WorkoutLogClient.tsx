@@ -246,6 +246,16 @@ export default function WorkoutLogClient({
         }
     };
 
+    const handleSetTypeChange = async (setId: string, setType: string) => {
+        const { error } = await updateSet(setId, { setType: setType as 'normal' | 'warmup' | 'dropset' | 'failure' | 'amrap' | 'rest_pause' });
+        if (error) {
+            alert(error);
+        } else {
+            const { data: updated } = await getActiveWorkout();
+            setActiveWorkout(updated);
+        }
+    };
+
     // Premium gate
     if (!isPremium) {
         return (
@@ -476,6 +486,8 @@ export default function WorkoutLogClient({
                                         set={set}
                                         onUpdate={(weight, reps, completed) => handleUpdateSet(set.id, weight, reps, completed)}
                                         onDelete={() => handleDeleteSet(set.id)}
+                                        onSetTypeChange={(setType) => handleSetTypeChange(set.id, setType)}
+                                        isFromProgram={!!activeWorkout.program_day_id}
                                     />
                                 ))}
                         </div>

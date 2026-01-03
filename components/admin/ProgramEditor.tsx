@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import type { ProgramDay, ProgramExercise, Exercise, WorkoutProgram, MuscleGroup } from '@/types/database.types';
+import type { ProgramDay, ProgramExercise, Exercise, WorkoutProgram, MuscleGroup, SetType } from '@/types/database.types';
 import { addProgramDay, deleteProgramDay, addProgramExercise, deleteProgramExercise, copyProgramWeek, createSystemExercise, copyProgramDay } from '@/lib/actions/workout-admin';
 
 const MUSCLE_GROUPS: { value: MuscleGroup; label: string }[] = [
@@ -13,6 +13,15 @@ const MUSCLE_GROUPS: { value: MuscleGroup; label: string }[] = [
     { value: 'ben', label: 'Ben' },
     { value: 'core', label: 'Core/Mage' },
     { value: 'cardio', label: 'Kondition' },
+];
+
+const SET_TYPES: { value: SetType; label: string; emoji: string }[] = [
+    { value: 'normal', label: 'Normal', emoji: '' },
+    { value: 'warmup', label: 'Uppvärmning', emoji: '🔥' },
+    { value: 'dropset', label: 'Dropset', emoji: '↓' },
+    { value: 'failure', label: 'Till Failure', emoji: '⚡' },
+    { value: 'amrap', label: 'AMRAP', emoji: '∞' },
+    { value: 'rest_pause', label: 'Rest-Pause', emoji: '⏸' },
 ];
 
 interface ProgramEditorProps {
@@ -38,6 +47,7 @@ export default function ProgramEditor({ program, programDays, allExercises }: Pr
     const [reps, setReps] = useState('8-12');
     const [notes, setNotes] = useState('');
     const [exerciseSearch, setExerciseSearch] = useState('');
+    const [setTypes, setSetTypes] = useState<SetType[]>(['normal', 'normal', 'normal']);
 
     // Create Exercise Form State
     const [newExerciseName, setNewExerciseName] = useState('');
@@ -112,6 +122,7 @@ export default function ProgramEditor({ program, programDays, allExercises }: Pr
             rest_seconds: 60,
             notes: notes || null,
             order_index: 999,
+            set_types: setTypes.slice(0, sets),  // Only include types for actual sets
         });
 
         if (error) alert(error);
@@ -448,7 +459,17 @@ export default function ProgramEditor({ program, programDays, allExercises }: Pr
                                                     <input
                                                         type="number"
                                                         value={sets}
-                                                        onChange={e => setSets(parseInt(e.target.value) || 3)}
+                                                        onChange={e => {
+                                                            const newSets = parseInt(e.target.value) || 3;
+                                                            setSets(newSets);
+                                                            // Adjust setTypes array to match new set count
+                                                            setSetTypes(prev => {
+                                                                if (newSets > prev.length) {
+                                                                    return [...prev, ...Array(newSets - prev.length).fill('normal') as SetType[]];
+                                                                }
+                                                                return prev.slice(0, newSets);
+                                                            });
+                                                        }}
                                                         className="w-full bg-surface border border-primary/20 p-2 text-sm text-primary"
                                                     />
                                                 </div>
@@ -470,6 +491,33 @@ export default function ProgramEditor({ program, programDays, allExercises }: Pr
                                                         onChange={e => setNotes(e.target.value)}
                                                         className="w-full bg-surface border border-primary/20 p-2 text-sm text-primary"
                                                     />
+                                                </div>
+                                            </div>
+
+                                            {/* Per-Set Type Selection */}
+                                            <div className="space-y-1">
+                                                <label className="text-[10px] text-primary/60 uppercase">Set-typer</label>
+                                                <div className="grid grid-cols-1 gap-1 max-h-32 overflow-y-auto">
+                                                    {Array.from({ length: sets }, (_, i) => (
+                                                        <div key={i} className="flex items-center gap-2 bg-surface border border-primary/10 px-2 py-1">
+                                                            <span className="text-xs text-primary/60 w-8">Set {i + 1}</span>
+                                                            <select
+                                                                value={setTypes[i] || 'normal'}
+                                                                onChange={e => {
+                                                                    const newTypes = [...setTypes];
+                                                                    newTypes[i] = e.target.value as SetType;
+                                                                    setSetTypes(newTypes);
+                                                                }}
+                                                                className="flex-1 bg-background border border-primary/20 p-1 text-xs text-primary"
+                                                            >
+                                                                {SET_TYPES.map(t => (
+                                                                    <option key={t.value} value={t.value}>
+                                                                        {t.emoji} {t.label}
+                                                                    </option>
+                                                                ))}
+                                                            </select>
+                                                        </div>
+                                                    ))}
                                                 </div>
                                             </div>
                                             <div className="flex gap-2">
@@ -497,6 +545,7 @@ export default function ProgramEditor({ program, programDays, allExercises }: Pr
                                                 setSets(3);
                                                 setReps('8-12');
                                                 setNotes('');
+                                                setSetTypes(['normal', 'normal', 'normal']);
                                             }}
                                             className="w-full py-2 border border-dashed border-primary/20 text-primary/50 text-sm hover:border-accent hover:text-accent"
                                         >
