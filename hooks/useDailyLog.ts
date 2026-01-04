@@ -156,14 +156,15 @@ export function useDailyLog(userId: string): UseDailyLogResult {
                 daysMissed = Math.floor(diffTime / (1000 * 60 * 60 * 24));
             }
 
-            // Determine streak status:
-            // 0 days missed = logged today or it's day 1
-            // 1 day missed = yesterday not logged, can still backlog
-            // >1 days missed = streak broken, must reset
+            // Determine streak status based on days since last log:
+            // 0 = logged today already
+            // 1 = last log was yesterday (normal/happy path)
+            // 2 = yesterday is missing, can still backlog
+            // >2 = streak broken, must reset
 
-            const streakBroken = daysMissed > 1;
-            const mustLogYesterday = daysMissed === 1;
-            const canLogToday = daysMissed === 0;
+            const streakBroken = daysMissed > 2;
+            const mustLogYesterday = daysMissed === 2;
+            const canLogToday = daysMissed <= 1;
 
             const result: GracePeriodResult = {
                 canLogToday,
